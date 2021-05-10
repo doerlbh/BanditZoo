@@ -17,4 +17,4 @@ script:
 
 # Push the results back to codecov
 after_success:
-  - bash <(curl -s https://codecov.io/bash) -t ${{ secrets.CODECOV_TOKEN }}
+  - bash <(curl -s https://codecov.io/bash)

@@ -44,6 +44,7 @@ class MultiArmedAgent(Agent):
     def __init__(self, M=None, name=None, seed=0):
         Agent.__init__(self, name=name, seed=seed)
         self.M = M  # number of possible action arms, e.g. 4
+        self.i_t = None  # current actions
 
 
 class ContextualAgent(Agent):
@@ -98,13 +99,27 @@ class TS(MultiArmedAgent):
 
     def __init__(self, M=None, name=None, seed=0):
         MultiArmedAgent.__init__(self, M=M, name=name, seed=seed)
+        
+        if self.M is not None:
+            self.S = [1] * self.M
+            self.F = [1] * self.M
 
+    def act(self):
+        theta = []
+        for i in range(self.M):
+            theta.append(np.random.beta(self.S[i], self.F[i]))
+        self.i_t = np.argmax(theta)
+        return self.i_t
+
+    def update(self, rewards=None):
+        self.S[self.i_t] += rewards
+        self.F[self.i_t] += 1 - rewards
 
 
 class CCTSB(ContextualCombinatorialAgent):
     """
     Contextual Combinatorial Thompson Sampling with Budget
-    
+
     Reference: Lin, B., & Bouneffouf, D. (2021). Contextual Combinatorial Bandit with Budget as
     Context for Pareto Optimal Epidemic Intervention. arXiv preprint arXiv:.
 

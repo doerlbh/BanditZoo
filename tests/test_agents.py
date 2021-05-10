@@ -10,6 +10,7 @@ from banditzoo import agents
     [
         {"agent": agents.Agent},
         {"agent": agents.MultiArmedAgent},
+        {"agent": agents.TS},
         {"agent": agents.ContextualAgent},
         {"agent": agents.CombinatorialAgent},
         {"agent": agents.CCTSB},
@@ -20,6 +21,25 @@ from banditzoo import agents
 class TestAllAgents(TestCase):
     def test_the_agent_can_initialize(self):
         a = self.agent()
+
+@parameterized_class(
+    [
+        {"agent": agents.TS},
+    ]
+)
+class TestMultiArmedAgents(TestCase):
+    def test_the_agent_can_initialize(self):
+        a = self.agent(M=5)
+
+    def test_the_agent_can_act(self):
+        a = self.agent(M=5)
+        action = a.act()
+
+    def test_the_agent_can_update(self):
+        a = self.agent(M=5)
+        action = a.act()
+        reward = 1
+        a.update(reward)
 
 
 @parameterized_class(
