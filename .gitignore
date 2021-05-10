@@ -127,3 +127,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# other system files
+.DS_Store
+
+# testing files
+*test.png
