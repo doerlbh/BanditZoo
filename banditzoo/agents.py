@@ -91,7 +91,7 @@ class ContextualCombinatorialAgent(CombinatorialAgent, ContextualAgent):
 
 class TS(MultiArmedAgent):
     """
-    Thompson Sampling
+    Thompson Sampling algorithm
 
     Reference: Thompson, W. R. (1933). On the likelihood that one unknown probability exceeds
     another in view of the evidence of two samples. Biometrika, 25(3/4), 285-294.
@@ -99,10 +99,10 @@ class TS(MultiArmedAgent):
 
     def __init__(self, M=None, name=None, seed=0):
         MultiArmedAgent.__init__(self, M=M, name=name, seed=seed)
-        
+
         if self.M is not None:
-            self.S = [1] * self.M
-            self.F = [1] * self.M
+            self.S = [1] * self.M  # success
+            self.F = [1] * self.M  # failure
 
     def act(self):
         theta = []
@@ -114,6 +114,48 @@ class TS(MultiArmedAgent):
     def update(self, rewards=None):
         self.S[self.i_t] += rewards
         self.F[self.i_t] += 1 - rewards
+
+
+class OGreedy(MultiArmedAgent):
+    """
+    Optimistic Greedy algorithm
+    """
+
+    def __init__(self, M=None, q_start=100, name=None, seed=0):
+        MultiArmedAgent.__init__(self, M=M, name=name, seed=seed)
+
+        self.q_start = q_start
+        if self.M is not None:
+            self.H = [0] * self.M  # the historical time certain arm is pulled
+            self.Q = [q_start] * self.M  # the estimated action Q value
+
+    def act(self):
+        self.i_t = np.argmax(self.Q)
+        return self.i_t
+
+    def update(self, rewards=None):
+        self.Q[self.i_t] = (self.Q[self.i_t] * self.H[self.i_t] + rewards) / (
+            self.H[self.i_t] + 1
+        )
+        self.H[self.i_t] += 1
+
+
+class EGreedy(OGreedy):
+    """
+    Epsilon Greedy algorithm
+    """
+
+    def __init__(self, M=None, epsilon=0.1, q_start=100, name=None, seed=0):
+        OGreedy.__init__(self, M=M, q_start=q_start, name=name, seed=seed)
+
+        self.epsilon = epsilon
+
+    def act(self):
+        if np.random.uniform() < self.epsilon:
+            self.i_t = np.random.choice(self.M)
+        else:
+            self.i_t = np.argmax(self.Q)
+        return self.i_t
 
 
 class CCTSB(ContextualCombinatorialAgent):

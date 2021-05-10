@@ -11,6 +11,8 @@ from banditzoo import agents
         {"agent": agents.Agent},
         {"agent": agents.MultiArmedAgent},
         {"agent": agents.TS},
+        {"agent": agents.OGreedy},
+        {"agent": agents.EGreedy},
         {"agent": agents.ContextualAgent},
         {"agent": agents.CombinatorialAgent},
         {"agent": agents.CCTSB},
@@ -22,9 +24,12 @@ class TestAllAgents(TestCase):
     def test_the_agent_can_initialize(self):
         a = self.agent()
 
+
 @parameterized_class(
     [
         {"agent": agents.TS},
+        {"agent": agents.OGreedy},
+        {"agent": agents.EGreedy},
     ]
 )
 class TestMultiArmedAgents(TestCase):
