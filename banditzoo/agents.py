@@ -26,13 +26,26 @@ class Agent(object):
         self.seed = seed
         np.random.seed(seed)
 
-    def observe(self, c):
-        self.c_t = c
+        self.i_t = None # current action
+        self.c_t = None # current context
+        self.t_t = 0    # current iteration
 
-    def act(self):
-        raise NotImplementedError
+        self.reward = []  # keep track of rewards
+
+    def observe(self, c):
+        self.c_t = c    # update context
 
     def update(self, rewards=None):
+        self.update_agent(rewards)
+        self.update_metrics(rewards)
+        
+    def act(self):
+        raise NotImplementedError
+        
+    def update_agent(self, rewards=None):
+        raise NotImplementedError
+
+    def update_metrics(self, rewards=None):
         raise NotImplementedError
 
 
@@ -51,13 +64,6 @@ class MultiArmedAgent(Agent):
 
         self.o_arms = []  # keep track of optimal arms
         self.regret = []  # keep track of regrets
-        self.reward = []  # keep track of rewards
-
-        self.i_t = None  # current actions
-        self.t_t = 0  # update iterations
-
-    def update(self, rewards=None):
-        self.update_metrics(rewards)
 
     def update_metrics(self, rewards):
         self.t_t += 1
@@ -79,8 +85,6 @@ class ContextualAgent(Agent):
         Agent.__init__(self, name=name, seed=seed)
 
         self.C = C  # dimension of the context, e.g. 100
-        self.c_t = None  # current context
-        self.i_t = None  # current actions
 
 
 class CombinatorialAgent(Agent):
@@ -110,7 +114,10 @@ class ContextualCombinatorialAgent(CombinatorialAgent, ContextualAgent):
     ):
         CombinatorialAgent.__init__(self, K=K, N=N, name=name, seed=seed)
         ContextualAgent.__init__(self, C=C, name=name, seed=seed)
-
+        
+    def update_metrics(self, rewards):
+        self.t_t += 1
+        self.reward.append(rewards)
 
 class Random(MultiArmedAgent):
     """
@@ -120,7 +127,9 @@ class Random(MultiArmedAgent):
     def act(self):
         self.i_t = np.random.choice(self.M)
         return self.i_t
-
+    
+    def update_agent(self, rewards=None):
+        pass
 
 class TS(MultiArmedAgent):
     """
@@ -144,10 +153,9 @@ class TS(MultiArmedAgent):
         self.i_t = np.argmax(theta)
         return self.i_t
 
-    def update(self, rewards=None):
+    def update_agent(self, rewards=None):
         self.S[self.i_t] += rewards
         self.F[self.i_t] += 1 - rewards
-        self.update_metrics(rewards)
 
 
 class OGreedy(MultiArmedAgent):
@@ -164,6 +172,8 @@ class OGreedy(MultiArmedAgent):
         self.i_t = np.argmax(self.Q)
         return self.i_t
 
+    def update_agent(self, rewards=None):
+        pass
 
 class EGreedy(OGreedy):
     """
@@ -181,7 +191,9 @@ class EGreedy(OGreedy):
         else:
             self.i_t = np.argmax(self.Q)
         return self.i_t
-
+    
+    def update_agent(self, rewards=None):
+        pass
 
 class UCB1(OGreedy):
     """
@@ -199,7 +211,9 @@ class UCB1(OGreedy):
                 self.Q + np.sqrt(2 * np.log(self.t_t) / np.array(self.H))
             )
         return self.i_t
-
+    
+    def update_agent(self, rewards=None):
+        pass
 
 class CCTSB(ContextualCombinatorialAgent):
     """
@@ -254,7 +268,7 @@ class CCTSB(ContextualCombinatorialAgent):
         self.i_t = i_t
         return self.i_t
 
-    def update(self, rewards):
+    def update_agent(self, rewards):
         r_star = self.obj_func(rewards, self.w)
         for k in range(self.K):
             i = self.i_t[k]
@@ -275,7 +289,7 @@ class CombRandom(ContextualCombinatorialAgent):
         self.i_t = i_t
         return self.i_t
 
-    def update(self, rewards=None):
+    def update_agent(self, rewards=None):
         pass
 
 
@@ -292,5 +306,5 @@ class CombRandomFixed(ContextualCombinatorialAgent):
             self.i_t = i_t
         return self.i_t
 
-    def update(self, rewards=None):
+    def update_agent(self, rewards=None):
         pass

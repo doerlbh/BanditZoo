@@ -11,18 +11,24 @@ def plot_results(results):
     plt.ion()  # turn on interactive mode
     agents, actions, metrics = results
     for i in range(len(metrics)):
-        rewards = np.array([m[0] for m in metrics[i]])
+        rewards = metrics[i]['reward'] 
         plt.plot(np.arange(len(rewards)), rewards, label=agents[i].name)
     plt.legend()
-    plt.savefig("test.png")
+    plt.savefig("mab_reward_test.png")
+    plt.close()
+    for i in range(len(metrics)):
+        rewards = metrics[i]['regret'] 
+        plt.plot(np.arange(len(rewards)), rewards, label=agents[i].name)
+    plt.legend()
+    plt.savefig("mab_regret_test.png")
 
 
-def epidemic_control_v1():
-    M = 5
-    reward_means = [0.4, 0.2, 0.9]
+def mab():
+    M = 30
+    reward_means = None
     cost_means = None
     w = BernoulliMultiArmedBandits(
-        M=C, reward_means=reward_means, name="MAB"
+        M=M, reward_means=reward_means, name="MAB"
     )
     rd = Random(M=M, name="Random")
     ts = TS(M=M, name="Thompson Sampling")
@@ -31,13 +37,13 @@ def epidemic_control_v1():
     ucb1 = UCB1(M=M, name="UCB1")
     for a in [rd, ts, og, eg, ucb1]:
         w.add_agent(a)
-    w.run_experiments(T=100)
+    w.run_experiments(T=10000)
     results = w.get_results()
     plot_results(results)
 
 
 def main():
-    epidemic_control_v1()
+    mab()
 
 
 if __name__ == "__main__":

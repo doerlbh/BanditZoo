@@ -186,13 +186,13 @@ class EpidemicControl(World):
             self.cost_means = np.random.uniform(0, reward_scale, self.cost_dimension)
         else:
             self.cost_means = cost_means
-
-
+ 
     def init_metrics(self):
-        return []
+        return { 'reward': [0], 'cost': [0]}      
     
     def update_metrics(self, metrics, reward, agent):
-        metrics.append(reward)
+        metrics['reward'].append(metrics['reward'][-1]+reward[0])
+        metrics['cost'].append(metrics['cost'][-1]+reward[1])
         return metrics
     
     def _fill_comb_index(self, N, count):
