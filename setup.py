@@ -8,7 +8,7 @@ setuptools.setup(
     version="0.0.1",
     author="Baihan Lin",
     author_email="doerlbh@gmail.com",
-    description="Python package of bandits and RL agents in different real-world environments",
+    description="Python library of bandits and RL agents in different real-world environments",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/doerlbh/BanditZoo",
@@ -22,7 +22,7 @@ setuptools.setup(
     ],
     license="MIT",
     package_dir={"": "banditzoo"},
-    packages=setuptools.find_packages(where="banditzoo"),
+    packages=['banditzoo'],
     python_requires=">=3.6",
     install_requires=[
         "numpy",
