@@ -1,0 +1,6 @@
+numpy
+parameterized
+coverage
+codecov
+nose
+unittest
