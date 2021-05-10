@@ -22,7 +22,7 @@ setuptools.setup(
     ],
     license="MIT",
     package_dir={"": "banditzoo"},
-    packages=['banditzoo'],
+    packages=setuptools.find_packages(where="banditzoo"),
     python_requires=">=3.6",
     install_requires=[
         "numpy",
