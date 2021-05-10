@@ -13,7 +13,7 @@ install:
 
 # Run the unit test
 script:
-  - nosetest --with-coverage
+  - nosetests --with-coverage --cover-package=banditzoo
 
 # Push the results back to codecov
 after_success:
