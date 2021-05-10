@@ -10,14 +10,16 @@ from banditzoo import agents
     [
         {"agent": agents.Agent},
         {"agent": agents.MultiArmedAgent},
+        {"agent": agents.Random},
         {"agent": agents.TS},
         {"agent": agents.OGreedy},
         {"agent": agents.EGreedy},
+        {"agent": agents.UCB1},
         {"agent": agents.ContextualAgent},
         {"agent": agents.CombinatorialAgent},
         {"agent": agents.CCTSB},
-        {"agent": agents.CRandom},
-        {"agent": agents.CRandomFixed},
+        {"agent": agents.CombRandom},
+        {"agent": agents.CombRandomFixed},
     ]
 )
 class TestAllAgents(TestCase):
@@ -27,9 +29,11 @@ class TestAllAgents(TestCase):
 
 @parameterized_class(
     [
+        {"agent": agents.Random},
         {"agent": agents.TS},
         {"agent": agents.OGreedy},
         {"agent": agents.EGreedy},
+        {"agent": agents.UCB1},
     ]
 )
 class TestMultiArmedAgents(TestCase):
@@ -50,8 +54,8 @@ class TestMultiArmedAgents(TestCase):
 @parameterized_class(
     [
         {"agent": agents.CCTSB},
-        {"agent": agents.CRandom},
-        {"agent": agents.CRandomFixed},
+        {"agent": agents.CombRandom},
+        {"agent": agents.CombRandomFixed},
     ]
 )
 class TestContextualCombinatorialAgents(TestCase):

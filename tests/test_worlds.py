@@ -11,7 +11,7 @@ from banditzoo import worlds, agents
         {"world": worlds.EpidemicControl_v2},
     ]
 )
-class TestWorlds(TestCase):
+class TestCombinatorialWorlds(TestCase):
     def test_the_world_can_initialize(self):
         world = self.world
         w = world()
@@ -27,7 +27,7 @@ class TestWorlds(TestCase):
         world = self.world
         w = world(K=2, N=[3, 4], C=12)
         a1 = agents.CCTSB(K=2, N=[3, 4], C=12)
-        a2 = agents.CRandom(K=2, N=[3, 4], C=12)
+        a2 = agents.CombRandom(K=2, N=[3, 4], C=12)
         w.add_agent(a1)
         w.add_agent(a2)
         w.run_experiments(T=10)

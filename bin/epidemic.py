@@ -3,7 +3,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from banditzoo.agents import CCTSB, CRandom, CRandomFixed
+from banditzoo.agents import CCTSB, CombRandom, CombRandomFixed
 from banditzoo.worlds import EpidemicControl_v1, EpidemicControl_v2
 
 
@@ -27,8 +27,8 @@ def epidemic_control_v1():
         K=K, N=N, C=C, reward_means=reward_means, cost_means=cost_means, name="epidemic"
     )
     cctsb = CCTSB(K=K, N=N, C=C, alpha=0.2, nabla=0.2, w=1, name="CCTSB")
-    crandom = CRandom(K=K, N=N, C=C, name="Random")
-    crandomfixed = CRandomFixed(K=K, N=N, C=C, name="Random_Fixed")
+    crandom = CombRandom(K=K, N=N, C=C, name="Random")
+    crandomfixed = CombRandomFixed(K=K, N=N, C=C, name="Random_Fixed")
     for a in [cctsb, crandom, crandomfixed]:
         w.add_agent(a)
     w.run_experiments(T=100)

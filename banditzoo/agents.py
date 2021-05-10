@@ -44,7 +44,30 @@ class MultiArmedAgent(Agent):
     def __init__(self, M=None, name=None, seed=0):
         Agent.__init__(self, name=name, seed=seed)
         self.M = M  # number of possible action arms, e.g. 4
+
+        if self.M is not None:
+            self.H = [0] * self.M  # the historical time certain arm is pulled
+            self.Q = [0] * self.M  # the estimated action Q value
+
+        self.o_arms = []  # keep track of optimal arms
+        self.regret = []  # keep track of regrets
+        self.reward = []  # keep track of rewards
+
         self.i_t = None  # current actions
+        self.t_t = 0  # update iterations
+
+    def update(self, rewards=None):
+        self.update_metrics(rewards)
+
+    def update_metrics(self, rewards):
+        self.t_t += 1
+        self.Q[self.i_t] = (self.Q[self.i_t] * self.H[self.i_t] + rewards) / (
+            self.H[self.i_t] + 1
+        )
+        self.H[self.i_t] += 1
+        self.o_arms.append(np.argmax(self.Q))
+        self.reward.append(rewards)
+        self.regret.append(np.max(self.Q) * self.t_t - np.sum(self.reward))
 
 
 class ContextualAgent(Agent):
@@ -89,6 +112,16 @@ class ContextualCombinatorialAgent(CombinatorialAgent, ContextualAgent):
         ContextualAgent.__init__(self, C=C, name=name, seed=seed)
 
 
+class Random(MultiArmedAgent):
+    """
+    Random agent to draw multi-armed bandits
+    """
+
+    def act(self):
+        self.i_t = np.random.choice(self.M)
+        return self.i_t
+
+
 class TS(MultiArmedAgent):
     """
     Thompson Sampling algorithm
@@ -114,6 +147,7 @@ class TS(MultiArmedAgent):
     def update(self, rewards=None):
         self.S[self.i_t] += rewards
         self.F[self.i_t] += 1 - rewards
+        self.update_metrics(rewards)
 
 
 class OGreedy(MultiArmedAgent):
@@ -125,19 +159,10 @@ class OGreedy(MultiArmedAgent):
         MultiArmedAgent.__init__(self, M=M, name=name, seed=seed)
 
         self.q_start = q_start
-        if self.M is not None:
-            self.H = [0] * self.M  # the historical time certain arm is pulled
-            self.Q = [q_start] * self.M  # the estimated action Q value
 
     def act(self):
         self.i_t = np.argmax(self.Q)
         return self.i_t
-
-    def update(self, rewards=None):
-        self.Q[self.i_t] = (self.Q[self.i_t] * self.H[self.i_t] + rewards) / (
-            self.H[self.i_t] + 1
-        )
-        self.H[self.i_t] += 1
 
 
 class EGreedy(OGreedy):
@@ -155,6 +180,24 @@ class EGreedy(OGreedy):
             self.i_t = np.random.choice(self.M)
         else:
             self.i_t = np.argmax(self.Q)
+        return self.i_t
+
+
+class UCB1(OGreedy):
+    """
+    Upper Confidence Bound 1 (UCB1) algorithm
+
+    Reference: Lai, T. L., & Robbins, H. (1985). Asymptotically efficient adaptive allocation
+    rules. Advances in applied mathematics, 6(1), 4-22.
+    """
+
+    def act(self):
+        if self.t_t < self.M:
+            self.i_t = self.t_t
+        else:
+            self.i_t = np.argmax(
+                self.Q + np.sqrt(2 * np.log(self.t_t) / np.array(self.H))
+            )
         return self.i_t
 
 
@@ -220,7 +263,7 @@ class CCTSB(ContextualCombinatorialAgent):
             self.theta_i_k[k][i] = np.linalg.pinv(self.B_i_k[k][i]) @ self.z_i_k[k][i]
 
 
-class CRandom(ContextualCombinatorialAgent):
+class CombRandom(ContextualCombinatorialAgent):
     """
     Random agent that performs combinatorial actions randomly at each round
     """
@@ -236,7 +279,7 @@ class CRandom(ContextualCombinatorialAgent):
         pass
 
 
-class CRandomFixed(ContextualCombinatorialAgent):
+class CombRandomFixed(ContextualCombinatorialAgent):
     """
     Random agent that performs a set of fixed combinatorial actions
     """
