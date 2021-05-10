@@ -32,13 +32,19 @@ class World(object):
 
     def add_agent(self, agent):
         self.history[len(self.agents)] = []
-        self.metrics[len(self.agents)] = []
+        self.metrics[len(self.agents)] = self.init_metrics()
         self.agents.append(agent)
-
+    
     def provide_context(self, t):
         raise NotImplementedError
 
     def assign_reward(self, action):
+        raise NotImplementedError
+
+    def init_metrics(self):
+        raise NotImplementedError
+    
+    def update_metrics(self, metrics, reward, agent):
         raise NotImplementedError
 
     def run_experiments(self, T=1000):
@@ -49,11 +55,69 @@ class World(object):
                 a = self.agents[i].act()
                 self.history[i].append(a)
                 r = self.assign_reward(a)
-                self.metrics[i].append(r)
                 self.agents[i].update(r)
+                self.metrics[i] = self.update_metrics(self.metrics[i], r, self.agents[i])
 
     def get_results(self):
         return self.agents, self.history, self.metrics
+
+
+class BernoulliMultiArmedBandits(World):
+    """
+    Multi-Armed Bandits Problem with Bernoulli rewards
+    """
+
+    def __init__(
+        self,
+        M=5,
+        name=None,
+        seed=0,
+        reward_means=None,
+        cost_means=None,
+        use_cost=False,
+        reward_scale=1,
+    ):
+        super().__init__(name=name, seed=seed)
+
+        self.M = M  # number of arms
+        self.use_cost = use_cost
+        self.reward_functions = None
+        self.cost_functions = None
+        if reward_means is None:
+            self.reward_means = np.random.uniform(0, reward_scale, self.M)
+        else:
+            self.reward_means = reward_means
+        if self.use_cost:
+            if cost_means is None:
+                self.cost_means = np.random.uniform(0, reward_scale, self.M)
+            else:
+                self.cost_means = cost_means
+       
+    def provide_context(self, t):
+        pass
+    
+    def assign_reward(self, action):
+        self.reward_functions = np.random.binomial(1, self.reward_means)
+        reward = self.reward_functions[action]
+        if self.use_cost:
+            cost = np.random.multivariate_normal(
+                self.cost_means, np.eye(self.M)
+            )
+            cost = self.reward_functions[action]
+            return [reward, cost]
+        else:
+            return reward
+
+    def init_metrics(self):
+        if self.use_cost:
+            return { 'reward': [0], 'regret': [0], 'cost': [0]}        
+        else:
+            return { 'reward': [0], 'regret': [0]}
+    
+    def update_metrics(self, metrics, reward, agent):
+        metrics['reward'].append(metrics['reward'][-1]+reward)
+        metrics['regret'].append(agent.regret[-1])
+        return metrics
 
 
 class EpidemicControl(World):
@@ -123,6 +187,14 @@ class EpidemicControl(World):
         else:
             self.cost_means = cost_means
 
+
+    def init_metrics(self):
+        return []
+    
+    def update_metrics(self, metrics, reward, agent):
+        metrics.append(reward)
+        return metrics
+    
     def _fill_comb_index(self, N, count):
         if len(N) == 1:
             action_dict = {}
