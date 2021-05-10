@@ -10,7 +10,7 @@ python:
 install:
   - pip install .
   - pip install nose coverage parameterized
-  - pip install coveralls codecov
+  - pip install coveralls codecov pypiview
 
 # Run the unit test
 script:
