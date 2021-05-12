@@ -10,14 +10,18 @@ from banditzoo import agents
     [
         {"agent": agents.Agent},
         {"agent": agents.MultiArmedAgent},
+        {"agent": agents.ContextualAgent},
+        {"agent": agents.CombinatorialAgent},
+        {"agent": agents.MultiObjectiveAgent},
         {"agent": agents.Random},
         {"agent": agents.TS},
         {"agent": agents.OGreedy},
         {"agent": agents.EGreedy},
         {"agent": agents.UCB1},
-        {"agent": agents.ContextualAgent},
-        {"agent": agents.CombinatorialAgent},
+        {"agent": agents.CCTS},
         {"agent": agents.CCTSB},
+        {"agent": agents.CCMAB},
+        {"agent": agents.CCMABB},
         {"agent": agents.CombRandom},
         {"agent": agents.CombRandomFixed},
     ]
@@ -53,7 +57,10 @@ class TestMultiArmedAgents(TestCase):
 
 @parameterized_class(
     [
+        {"agent": agents.CCTS},
         {"agent": agents.CCTSB},
+        {"agent": agents.CCMAB},
+        {"agent": agents.CCMABB},
         {"agent": agents.CombRandom},
         {"agent": agents.CombRandomFixed},
     ]
@@ -73,5 +80,5 @@ class TestContextualCombinatorialAgents(TestCase):
         context = np.arange(12)
         a.observe(context)
         action = a.act()
-        reward = [10, 20]
+        reward = [10]
         a.update(reward)

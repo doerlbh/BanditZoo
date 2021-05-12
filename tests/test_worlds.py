@@ -5,10 +5,14 @@ from parameterized import parameterized_class
 from banditzoo import worlds, agents
 
 
-
 @parameterized_class(
     [
+        {"world": worlds.World},
         {"world": worlds.BernoulliMultiArmedBandits},
+        {"world": worlds.ContextualCombinatorialBandits},
+        {"world": worlds.EpidemicControl},
+        {"world": worlds.EpidemicControl_v1},
+        {"world": worlds.EpidemicControl_v2},
     ]
 )
 class TestMultiArmedBanditWorlds(TestCase):
@@ -16,6 +20,25 @@ class TestMultiArmedBanditWorlds(TestCase):
         world = self.world
         w = world()
 
+    def test_the_world_can_add_agent(self):
+        world = self.world
+        w = world()
+        a = agents.Random(M=5)
+        w.add_agent(a)
+
+    def test_the_world_can_add_agent_pools(self):
+        world = self.world
+        w = world()
+        a = agents.Random(M=5)
+        w.add_agent_pool([a, a])
+
+
+@parameterized_class(
+    [
+        {"world": worlds.BernoulliMultiArmedBandits},
+    ]
+)
+class TestMultiArmedBanditWorlds(TestCase):
     def test_the_world_can_run_with_one_agent(self):
         world = self.world
         w = world(M=5)
@@ -31,7 +54,8 @@ class TestMultiArmedBanditWorlds(TestCase):
         w.add_agent(a1)
         w.add_agent(a2)
         w.run_experiments(T=10)
-        
+
+
 @parameterized_class(
     [
         {"world": worlds.EpidemicControl_v1},
@@ -39,10 +63,6 @@ class TestMultiArmedBanditWorlds(TestCase):
     ]
 )
 class TestCombinatorialWorlds(TestCase):
-    def test_the_world_can_initialize(self):
-        world = self.world
-        w = world()
-
     def test_the_world_can_run_with_one_agent(self):
         world = self.world
         w = world(K=2, N=[3, 4], C=12)

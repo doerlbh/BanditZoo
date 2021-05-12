@@ -26,27 +26,30 @@ class Agent(object):
         self.seed = seed
         np.random.seed(seed)
 
-        self.i_t = None # current action
-        self.c_t = None # current context
-        self.t_t = 0    # current iteration
+        self.i_t = None  # current action
+        self.c_t = None  # current context
+        self.t_t = 0  # current iteration
 
         self.reward = []  # keep track of rewards
 
     def observe(self, c):
-        self.c_t = c    # update context
+        self.c_t = c  # update context
 
     def update(self, rewards=None):
         self.update_agent(rewards)
         self.update_metrics(rewards)
-        
+
     def act(self):
         raise NotImplementedError
-        
+
     def update_agent(self, rewards=None):
         raise NotImplementedError
 
     def update_metrics(self, rewards=None):
         raise NotImplementedError
+
+    def combine_rewards(self, rewards=None):
+        return np.sum(rewards)
 
 
 class MultiArmedAgent(Agent):
@@ -54,9 +57,16 @@ class MultiArmedAgent(Agent):
     Base agent that performs the multi-armed bandit problem
     """
 
-    def __init__(self, M=None, name=None, seed=0):
+    def __init__(
+        self,
+        name=None,
+        seed=0,
+        **kwargs,
+    ):
+        M = kwargs.get("M", None)
         Agent.__init__(self, name=name, seed=seed)
-        self.M = M  # number of possible action arms, e.g. 4
+
+        self.M = M  # number of possible action arms, e.g. 5
 
         if self.M is not None:
             self.H = [0] * self.M  # the historical time certain arm is pulled
@@ -66,6 +76,7 @@ class MultiArmedAgent(Agent):
         self.regret = []  # keep track of regrets
 
     def update_metrics(self, rewards):
+        rewards = self.combine_rewards(rewards)
         self.t_t += 1
         self.Q[self.i_t] = (self.Q[self.i_t] * self.H[self.i_t] + rewards) / (
             self.H[self.i_t] + 1
@@ -81,7 +92,13 @@ class ContextualAgent(Agent):
     Base agent that performs the combinatorial bandit problem
     """
 
-    def __init__(self, C=None, name=None, seed=0):
+    def __init__(
+        self,
+        name=None,
+        seed=0,
+        **kwargs,
+    ):
+        C = kwargs.get("C", None)
         Agent.__init__(self, name=name, seed=seed)
 
         self.C = C  # dimension of the context, e.g. 100
@@ -92,7 +109,14 @@ class CombinatorialAgent(Agent):
     Base agent that performs the combinatorial bandit problem
     """
 
-    def __init__(self, K=None, N=None, name=None, seed=0):
+    def __init__(
+        self,
+        name=None,
+        seed=0,
+        **kwargs,
+    ):
+        K = kwargs.get("K", None)
+        N = kwargs.get("N", None)
         Agent.__init__(self, name=name, seed=seed)
 
         self.K = K  # number of possible action dimensions, e.g. 4
@@ -106,18 +130,43 @@ class ContextualCombinatorialAgent(CombinatorialAgent, ContextualAgent):
 
     def __init__(
         self,
-        K=None,
-        N=None,
-        C=None,
         name=None,
         seed=0,
+        **kwargs,
     ):
+        K = kwargs.get("K", None)
+        N = kwargs.get("N", None)
+        C = kwargs.get("C", None)
         CombinatorialAgent.__init__(self, K=K, N=N, name=name, seed=seed)
         ContextualAgent.__init__(self, C=C, name=name, seed=seed)
-        
+
     def update_metrics(self, rewards):
+        rewards = self.combine_rewards(rewards)
         self.t_t += 1
         self.reward.append(rewards)
+
+
+class MultiObjectiveAgent(Agent):
+    """
+    Base agent that learns from multiple reward signals
+    """
+
+    def __init__(
+        self,
+        name=None,
+        seed=0,
+        **kwargs,
+    ):
+        obj_func = kwargs.get("obj_func", default_obj)
+        obj_params = kwargs.get("obj_params", {})
+        Agent.__init__(self, name=name, seed=seed)
+
+        self.obj_func = obj_func  # the combined objective function
+        self.obj_params = obj_params  # the params to compute objective function
+
+    def combine_rewards(self, rewards=None):
+        return self.obj_func(rewards, self.obj_params)
+
 
 class Random(MultiArmedAgent):
     """
@@ -127,9 +176,10 @@ class Random(MultiArmedAgent):
     def act(self):
         self.i_t = np.random.choice(self.M)
         return self.i_t
-    
+
     def update_agent(self, rewards=None):
         pass
+
 
 class TS(MultiArmedAgent):
     """
@@ -139,8 +189,14 @@ class TS(MultiArmedAgent):
     another in view of the evidence of two samples. Biometrika, 25(3/4), 285-294.
     """
 
-    def __init__(self, M=None, name=None, seed=0):
-        MultiArmedAgent.__init__(self, M=M, name=name, seed=seed)
+    def __init__(
+        self,
+        name=None,
+        seed=0,
+        **kwargs,
+    ):
+        M = kwargs.get("M", None)
+        MultiArmedAgent.__init__(self, name=name, seed=seed, M=M)
 
         if self.M is not None:
             self.S = [1] * self.M  # success
@@ -154,6 +210,7 @@ class TS(MultiArmedAgent):
         return self.i_t
 
     def update_agent(self, rewards=None):
+        rewards = self.combine_rewards(rewards)
         self.S[self.i_t] += rewards
         self.F[self.i_t] += 1 - rewards
 
@@ -163,8 +220,15 @@ class OGreedy(MultiArmedAgent):
     Optimistic Greedy algorithm
     """
 
-    def __init__(self, M=None, q_start=100, name=None, seed=0):
-        MultiArmedAgent.__init__(self, M=M, name=name, seed=seed)
+    def __init__(
+        self,
+        name=None,
+        seed=0,
+        **kwargs,
+    ):
+        M = kwargs.get("M", None)
+        q_start = kwargs.get("q_start", 100)
+        MultiArmedAgent.__init__(self, name=name, seed=seed, M=M)
 
         self.q_start = q_start
 
@@ -175,13 +239,22 @@ class OGreedy(MultiArmedAgent):
     def update_agent(self, rewards=None):
         pass
 
+
 class EGreedy(OGreedy):
     """
     Epsilon Greedy algorithm
     """
 
-    def __init__(self, M=None, epsilon=0.1, q_start=100, name=None, seed=0):
-        OGreedy.__init__(self, M=M, q_start=q_start, name=name, seed=seed)
+    def __init__(
+        self,
+        name=None,
+        seed=0,
+        **kwargs,
+    ):
+        M = kwargs.get("M", None)
+        q_start = kwargs.get("q_start", 100)
+        epsilon = kwargs.get("epsilon", 0.1)
+        OGreedy.__init__(self, name=name, seed=seed, M=M, q_start=q_start)
 
         self.epsilon = epsilon
 
@@ -191,9 +264,10 @@ class EGreedy(OGreedy):
         else:
             self.i_t = np.argmax(self.Q)
         return self.i_t
-    
+
     def update_agent(self, rewards=None):
         pass
+
 
 class UCB1(OGreedy):
     """
@@ -211,19 +285,20 @@ class UCB1(OGreedy):
                 self.Q + np.sqrt(2 * np.log(self.t_t) / np.array(self.H))
             )
         return self.i_t
-    
+
     def update_agent(self, rewards=None):
         pass
 
-class CCTSB(ContextualCombinatorialAgent):
+
+class CCTS(ContextualCombinatorialAgent):
     """
-    Contextual Combinatorial Thompson Sampling with Budget
+    Contextual Combinatorial Thompson Sampling
 
     Reference: Lin, B., & Bouneffouf, D. (2021). Contextual Combinatorial Bandit with Budget as
     Context for Pareto Optimal Epidemic Intervention. arXiv preprint arXiv:.
 
     usage:
-    bandit = CCTSB(K=5, N=[4,3,3,4,5], C=100, alpha=0.5, nabla=0.5, w=0.5, obj_func=default_obj, seed=0)
+    bandit = CCTS(K=5, N=[4,3,3,4,5], C=100, alpha=0.5, nabla=0.5, name='CCTS', seed=0)
     bandit.observe(context)
     actions = bandit.act()
     bandit.update(reward,cost)
@@ -231,21 +306,19 @@ class CCTSB(ContextualCombinatorialAgent):
 
     def __init__(
         self,
-        K=None,
-        N=None,
-        C=None,
-        alpha=0.1,
-        nabla=0.1,
-        w=0.5,
-        obj_func=default_obj,
         name=None,
         seed=0,
+        **kwargs,
     ):
-        ContextualCombinatorialAgent.__init__(self, K=K, N=N, C=C, name=name, seed=seed)
+        K = kwargs.get("K", None)
+        N = kwargs.get("N", None)
+        C = kwargs.get("C", None)
+        alpha = kwargs.get("alpha", 0.1)
+        nabla = kwargs.get("nabla", 0.1)
+        ContextualCombinatorialAgent.__init__(self, name=name, seed=seed, K=K, N=N, C=C)
+
         self.alpha = alpha
         self.nabla = nabla
-        self.w = w
-        self.obj_func = obj_func
 
         if self.N is not None:
             self.B_i_k = [n * [np.eye(C)] for n in self.N]
@@ -254,6 +327,7 @@ class CCTSB(ContextualCombinatorialAgent):
 
     def act(self):
         sample_theta = [n * [0] for n in self.N]
+        # print(sample_theta)
         i_t = {}
         for k in range(self.K):
 
@@ -262,6 +336,8 @@ class CCTSB(ContextualCombinatorialAgent):
                     self.theta_i_k[k][i],
                     self.alpha ** 2 * np.linalg.pinv(self.B_i_k[k][i]),
                 )
+            #     print(sample_theta[k][i])
+            # print(self.c_t, self.c_t.T @ np.array(sample_theta[k]).T)
 
             i_t[k] = np.argmax((self.c_t.T @ np.array(sample_theta[k]).T))
 
@@ -269,12 +345,118 @@ class CCTSB(ContextualCombinatorialAgent):
         return self.i_t
 
     def update_agent(self, rewards):
-        r_star = self.obj_func(rewards, self.w)
+        rewards = self.combine_rewards(rewards)
         for k in range(self.K):
             i = self.i_t[k]
             self.B_i_k[k][i] = self.nabla * self.B_i_k[k][i] + self.c_t @ self.c_t.T
-            self.z_i_k[k][i] += self.c_t * r_star
+            self.z_i_k[k][i] += self.c_t * rewards
             self.theta_i_k[k][i] = np.linalg.pinv(self.B_i_k[k][i]) @ self.z_i_k[k][i]
+
+
+class CCTSB(CCTS, MultiObjectiveAgent):
+    """
+    Contextual Combinatorial Thompson Sampling with Budget
+
+    Reference: Lin, B., & Bouneffouf, D. (2021). Contextual Combinatorial Bandit with Budget as
+    Context for Pareto Optimal Epidemic Intervention. arXiv preprint arXiv:.
+
+    usage:
+    bandit = CCTSB(K=5, N=[4,3,3,4,5], C=100, alpha=0.5, nabla=0.5, obj_func=obj_func,
+        obj_params=obj_params name='CCTSB', seed=0)
+    bandit.observe(context)
+    actions = bandit.act()
+    bandit.update(reward,cost)
+    """
+
+    def __init__(
+        self,
+        name=None,
+        seed=0,
+        **kwargs,
+    ):
+        K = kwargs.get("K", None)
+        N = kwargs.get("N", None)
+        C = kwargs.get("C", None)
+        alpha = kwargs.get("alpha", 0.1)
+        nabla = kwargs.get("nabla", 0.1)
+        obj_func = kwargs.get("obj_func", default_obj)
+        obj_params = kwargs.get("obj_params", {})
+        CCTS.__init__(
+            self, name=name, seed=seed, K=K, N=N, C=C, alpha=alpha, nabla=nabla
+        )
+        MultiObjectiveAgent.__init__(
+            self, name=name, seed=seed, obj_func=obj_func, obj_params=obj_params
+        )
+
+
+class CCMAB(ContextualCombinatorialAgent):
+    """
+    Independent MAB or Contextual Bandit agents to solve the contextual combinatorial bandit problem
+
+    usage:
+    bandit = CCMAB(K=5, N=[4,3,3,4,5], C=100, agent_base=UCB1, name='CCMAB-UCB1', seed=0)
+    bandit.observe(context)
+    actions = bandit.act()
+    bandit.update(reward,cost)
+    """
+
+    def __init__(
+        self,
+        name=None,
+        seed=0,
+        **kwargs,
+    ):
+        K = kwargs.get("K", None)
+        N = kwargs.get("N", None)
+        C = kwargs.get("C", None)
+        agent_base = kwargs.get("agent_base", UCB1)
+        ContextualCombinatorialAgent.__init__(self, K=K, N=N, C=C, name=name, seed=seed)
+
+        self.agent_base = agent_base
+
+        if self.N is not None:
+            self.agents = [self.agent_base(M=n) for n in self.N]
+
+    def act(self):
+        i_t = {}
+        for k in range(self.K):
+            i_t[k] = self.agents[k].act()
+        self.i_t = i_t
+        return self.i_t
+
+    def update_agent(self, rewards):
+        rewards = self.combine_rewards(rewards)
+        for k in range(self.K):
+            self.agents[k].update(rewards)
+
+
+class CCMABB(CCMAB, MultiObjectiveAgent):
+    """
+    Independent MAB or Contextual Bandit agents to solve the contextual combinatorial bandit
+    problem with multiple objectives in the rewards
+
+    usage:
+    bandit = CCMABB(K=5, N=[4,3,3,4,5], C=100, agent_base=UCB1, obj_func=obj_func,
+        obj_params=obj_params, name='CCMABB-UCB1', seed=0)
+    bandit.observe(context)
+    actions = bandit.act()
+    bandit.update(reward,cost)
+    """
+
+    def __init__(
+        self,
+        name=None,
+        seed=0,
+        **kwargs,
+    ):
+        K = kwargs.get("K", None)
+        N = kwargs.get("N", None)
+        C = kwargs.get("C", None)
+        agent_base = kwargs.get("agent_base", UCB1)
+        obj_func = kwargs.get("obj_func", default_obj)
+        obj_params = kwargs.get("obj_params", {})
+        CCMAB.__init__(self, K=K, N=N, C=C, agent_base=agent_base, name=name, seed=seed)
+        MultiObjectiveAgent.__init__(self, obj_func=obj_func, obj_params=obj_params)
 
 
 class CombRandom(ContextualCombinatorialAgent):

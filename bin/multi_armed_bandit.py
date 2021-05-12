@@ -11,13 +11,13 @@ def plot_results(results):
     plt.ion()  # turn on interactive mode
     agents, actions, metrics = results
     for i in range(len(metrics)):
-        rewards = metrics[i]['reward'] 
+        rewards = metrics[i]["reward"]
         plt.plot(np.arange(len(rewards)), rewards, label=agents[i].name)
     plt.legend()
     plt.savefig("mab_reward_test.png")
     plt.close()
     for i in range(len(metrics)):
-        rewards = metrics[i]['regret'] 
+        rewards = metrics[i]["regret"]
         plt.plot(np.arange(len(rewards)), rewards, label=agents[i].name)
     plt.legend()
     plt.savefig("mab_regret_test.png")
@@ -27,9 +27,7 @@ def mab():
     M = 30
     reward_means = None
     cost_means = None
-    w = BernoulliMultiArmedBandits(
-        M=M, reward_means=reward_means, name="MAB"
-    )
+    w = BernoulliMultiArmedBandits(M=M, reward_means=reward_means, name="MAB")
     rd = Random(M=M, name="Random")
     ts = TS(M=M, name="Thompson Sampling")
     og = OGreedy(M=M, name="Optimistic Greedy")
