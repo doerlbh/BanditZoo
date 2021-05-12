@@ -4,12 +4,13 @@
 Classes of Games, i.e. experiments to run agents in worlds
 
 usage:
-w = Game()
+g = Game(N=5,M=10)
 ...
-w.add_agent(agent)
-w.run_experiments(T=1000)
+g.add_world_class(worlds.BernoulliMultiArmedBandits, M=3)
+g.add_agent_class(agents.TS, M=3)
+g.run_experiments(T=1000)
 ...
-results = w.get_results()
+results = g.get_metrics()
 """
 
 import numpy as np
