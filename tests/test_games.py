@@ -57,7 +57,9 @@ class TestGames(TestCase):
         g.add_agent_class(agents.TS, M=5)
         g.add_agent_class(agents.EGreedy, M=5, q_start=100, epsilon=0.2)
 
-    def test_the_game_can_run_multiple_agents_to_multiple_worlds_with_different_configs(self):
+    def test_the_game_can_run_multiple_agents_to_multiple_worlds_with_different_configs(
+        self,
+    ):
         game = self.game
         g = game(M=3, N=4)
         g.add_world_class(worlds.BernoulliMultiArmedBandits, M=5, name="MAB5")
@@ -65,7 +67,7 @@ class TestGames(TestCase):
         g.add_agent_class(agents.TS)
         g.add_agent_class(agents.EGreedy, q_start=100, epsilon=0.2)
         g.run_experiments(T=10)
-        
+
     def test_the_game_raise_error_if_agents_are_assigned_before_worlds(self):
         game = self.game
         g = game(M=3, N=4)
@@ -126,7 +128,7 @@ class TestGames(TestCase):
             "Please select a supported grouping tag ('agent', 'world')."
             in str(context.exception)
         )
- 
+
     def test_the_game_raise_error_if_get_metrics_works_when_group_by_agent(self):
         game = self.game
         g = game(M=10, N=10)
@@ -135,9 +137,9 @@ class TestGames(TestCase):
         g.run_experiments(T=2)
         expected_reward = [0, 0.3, 0.6]
         metrics = g.get_metrics(group_by="agent")
-        avg_reward = metrics['MAB5']['TS']['reward_avg']
+        avg_reward = metrics["MAB5"]["TS"]["reward_avg"]
         np.allclose(avg_reward, expected_reward)
-               
+
     def test_the_game_raise_error_if_get_metrics_works_when_group_by_world(self):
         game = self.game
         g = game(M=10, N=10)
@@ -146,5 +148,5 @@ class TestGames(TestCase):
         g.run_experiments(T=2)
         expected_reward = [0, 0.3, 0.6]
         metrics = g.get_metrics(group_by="world")
-        avg_reward = metrics['MAB5'][0]['TS']['reward_avg']
+        avg_reward = metrics["MAB5"][0]["TS"]["reward_avg"]
         np.allclose(avg_reward, expected_reward)

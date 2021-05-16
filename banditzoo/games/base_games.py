@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Classes of Games, i.e. experiments to run agents in worlds
+Base classes of Games, i.e. experiments to run agents in worlds.
 
 usage:
 g = Game(N=5,M=10)
@@ -14,7 +14,9 @@ results = g.get_metrics()
 """
 
 import numpy as np
+import pandas as pd
 from collections import defaultdict
+
 
 class Game(object):
     """
@@ -35,8 +37,8 @@ class Game(object):
         self.seed = seed
         np.random.seed(seed)
 
-        self.N = N 
-        self.M = M 
+        self.N = N
+        self.M = M
 
         self.world_names = []
         self.agent_names = []
@@ -45,8 +47,8 @@ class Game(object):
         self.history_pools = {}
         self.metrics_pools = {}
 
-        self.agent_add_lock = False  
-        self.world_add_lock = False  
+        self.agent_add_lock = False
+        self.world_add_lock = False
 
     def add_world_class(self, world_class, **kwargs):
         """Add world class into the game.
@@ -59,12 +61,12 @@ class Game(object):
             Exception: [if the game has started, no new world can enter].
             Exception: [if the agents are in, no new world can enter].
         """
-        
+
         if self.world_add_lock and self.agent_add_lock:
             raise Exception("No worlds can enter anymore because the game is run.")
         if self.world_add_lock and not self.agent_add_lock:
             raise Exception("No worlds can enter anymore because the agents are in.")
-        
+
         world_name = kwargs.get("name", None)
         self.world_names.append(world_name)
         world_instances = []
@@ -89,12 +91,12 @@ class Game(object):
             Exception: [if the game has started, no new agent can enter].
             Exception: [if the game has no worlds, no agent can enter].
         """
-        
+
         if self.agent_add_lock:
             raise Exception("No agents can enter anymore because the game is run.")
         if len(self.world_pools) == 0:
             raise Exception("Please initiate all the worlds before adding agents.")
-        
+
         agent_name = kwargs.get("name", agent_class(**kwargs).name)
         self.agent_names.append(agent_name)
         agent_instances = []
@@ -108,8 +110,7 @@ class Game(object):
         self.world_add_lock = True
 
     def aggregate_world_metrics(self):
-        """Aggregate the metrics in the M dimension (the agent instances).
-        """
+        """Aggregate the metrics in the M dimension (the agent instances)."""
         agg_metrics = {}
         for k in self.world_names:
             agg_metrics[k] = {}
@@ -118,37 +119,48 @@ class Game(object):
                 agg_metrics[k][i] = {}
                 for a in self.agent_names:
                     metrics = self.metrics_pools[k][i][a]
-                    agg_metrics[k][i][a] = defaultdict(lambda : [])
+                    agg_metrics[k][i][a] = defaultdict(lambda: [])
                     for m in metrics:
                         for m_key, m_val in m.items():
                             agg_metrics[k][i][a][m_key].append(m_val)
                     for mk in metrics_keys:
-                        agg_metrics[k][i][a][mk+'_avg'] = np.mean(agg_metrics[k][i][a][mk], axis=0)
-                        agg_metrics[k][i][a][mk+'_std'] = np.std(agg_metrics[k][i][a][mk], axis=0)
-                        agg_metrics[k][i][a][mk+'_sem'] = np.std(agg_metrics[k][i][a][mk], axis=0, ddof=1) / np.sqrt(self.M)
-        return agg_metrics            
-                    
+                        agg_metrics[k][i][a][mk + "_avg"] = np.mean(
+                            agg_metrics[k][i][a][mk], axis=0
+                        )
+                        agg_metrics[k][i][a][mk + "_std"] = np.std(
+                            agg_metrics[k][i][a][mk], axis=0
+                        )
+                        agg_metrics[k][i][a][mk + "_sem"] = np.std(
+                            agg_metrics[k][i][a][mk], axis=0, ddof=1
+                        ) / np.sqrt(self.M)
+        return agg_metrics
+
     def aggregate_agent_metrics(self):
-        """Aggregate the metrics in both M and N dimensions (world and agent instances).
-        """
+        """Aggregate the metrics in both M and N dimensions (world and agent instances)."""
         world_agg_metrics = self.aggregate_world_metrics()
         agg_metrics = {}
         for k in self.world_names:
-            agg_metrics[k] = defaultdict(lambda : {})
+            agg_metrics[k] = defaultdict(lambda: {})
             metrics_keys = list(self.world_pools[k][0].metrics[0].keys())
             for i in range(self.N):
                 for a in self.agent_names:
-                    agg_metrics[k][a] = defaultdict(lambda : [])
-                    agg_metrics[k][a]['name'] = a
+                    agg_metrics[k][a] = defaultdict(lambda: [])
+                    agg_metrics[k][a]["name"] = a
                     for mk in metrics_keys:
                         for m in world_agg_metrics[k][i][a][mk]:
                             agg_metrics[k][a][mk].append(m)
             for a in self.agent_names:
                 for mk in metrics_keys:
-                    agg_metrics[k][a][mk+'_avg'] = np.mean(agg_metrics[k][a][mk], axis=0)
-                    agg_metrics[k][a][mk+'_std'] = np.std(agg_metrics[k][a][mk], axis=0)
-                    agg_metrics[k][a][mk+'_sem'] = np.std(agg_metrics[k][a][mk], axis=0, ddof=1) / np.sqrt(self.M*self.N)                         
-        return agg_metrics            
+                    agg_metrics[k][a][mk + "_avg"] = np.mean(
+                        agg_metrics[k][a][mk], axis=0
+                    )
+                    agg_metrics[k][a][mk + "_std"] = np.std(
+                        agg_metrics[k][a][mk], axis=0
+                    )
+                    agg_metrics[k][a][mk + "_sem"] = np.std(
+                        agg_metrics[k][a][mk], axis=0, ddof=1
+                    ) / np.sqrt(self.M * self.N)
+        return agg_metrics
 
     def run_experiments(self, T, progress=False):
         """Run the game with certain iterations.
@@ -187,24 +199,26 @@ class Game(object):
             self.metrics_pools,
         )
 
-    def get_metrics(self, group_by='agent'):
+    def get_metrics(self, group_by="agent"):
         """Output the metrics of the agents in the worlds.
 
         Args:
             group_by (str, optional): [output format of the metrics].
                 If 'agent', the metrics are aggregated by both N and M dimension.
-                If 'world', the metrics are aggregated only in the M dimension (the 
+                If 'world', the metrics are aggregated only in the M dimension (the
                 agent instances) and not the world instances. Defaults to 'agent'.
 
         Returns:
             [dict]: [the aggregated metrics of the agents].
-            
+
         Raises:
             ValueError: [if the game has started, no new agent can enter].
         """
-        if group_by == 'agent':
+        if group_by == "agent":
             return self.aggregate_agent_metrics()
-        elif group_by == 'world':
+        elif group_by == "world":
             return self.aggregate_world_metrics()
         else:
-            raise ValueError("Please select a supported grouping tag ('agent', 'world').")
+            raise ValueError(
+                "Please select a supported grouping tag ('agent', 'world')."
+            )
