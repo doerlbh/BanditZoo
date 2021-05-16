@@ -109,6 +109,24 @@ class Game(object):
                 self.metrics_pools[k][i][agent_name] = []
         self.world_add_lock = True
 
+    def get_tabular_metrics(self):
+        """Extract the metrics in a tabular format in a pandas dataframe."""
+        agg_metrics = defaultdict(lambda: [])
+        for k in self.world_names:
+            metrics_keys = list(self.world_pools[k][0].metrics[0].keys())
+            time_length = len(self.world_pools[k][0].metrics[0][metrics_keys[0]])
+            for i in range(self.N):
+                for a in self.agent_names:
+                    metrics = self.metrics_pools[k][i][a]
+                    for m in metrics:
+                        for t in range(time_length):
+                            agg_metrics["world"].append(k)
+                            agg_metrics["agent"].append(a)
+                            agg_metrics["time"].append(t)
+                            for m_key, m_val in m.items():
+                                agg_metrics[m_key].append(m_val[t])
+        return pd.DataFrame(agg_metrics)
+
     def aggregate_world_metrics(self):
         """Aggregate the metrics in the M dimension (the agent instances)."""
         agg_metrics = {}
@@ -199,14 +217,15 @@ class Game(object):
             self.metrics_pools,
         )
 
-    def get_metrics(self, group_by="agent"):
+    def get_metrics(self, form="tabular"):
         """Output the metrics of the agents in the worlds.
 
         Args:
             group_by (str, optional): [output format of the metrics].
+                If 'tabular', the metrics are stored in a pandas dataframe.
                 If 'agent', the metrics are aggregated by both N and M dimension.
                 If 'world', the metrics are aggregated only in the M dimension (the
-                agent instances) and not the world instances. Defaults to 'agent'.
+                agent instances) and not the world instances. Defaults to 'tabular'.
 
         Returns:
             [dict]: [the aggregated metrics of the agents].
@@ -214,11 +233,13 @@ class Game(object):
         Raises:
             ValueError: [if the game has started, no new agent can enter].
         """
-        if group_by == "agent":
+        if form == "tabular":
+            return self.get_tabular_metrics()
+        elif form == "agent":
             return self.aggregate_agent_metrics()
-        elif group_by == "world":
+        elif form == "world":
             return self.aggregate_world_metrics()
         else:
             raise ValueError(
-                "Please select a supported grouping tag ('agent', 'world')."
+                "Please select a supported format ('tabular', 'agent', 'world')."
             )

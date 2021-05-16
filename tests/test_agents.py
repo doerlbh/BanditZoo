@@ -82,8 +82,8 @@ class TestContextualCombinatorialAgents(TestCase):
         action = a.act()
         reward = [10]
         a.update(reward)
-        
-        
+
+
 class TestUtils(TestCase):
     def test_the_default_obj_works(self):
         rewards = [1, 2]

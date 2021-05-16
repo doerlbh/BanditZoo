@@ -123,11 +123,22 @@ class TestGames(TestCase):
         g.add_agent_class(agents.TS)
         g.run_experiments(T=10)
         with self.assertRaises(ValueError) as context:
-            g.get_metrics(group_by="crazy")
+            g.get_metrics(form="crazy")
         self.assertTrue(
-            "Please select a supported grouping tag ('agent', 'world')."
+            "Please select a supported format ('tabular', 'agent', 'world')."
             in str(context.exception)
         )
+
+    def test_the_game_raise_error_if_get_metrics_works_in_tabular_form(self):
+        game = self.game
+        g = game(M=10, N=10)
+        g.add_world_class(worlds.BernoulliMultiArmedBandits, M=5, name="MAB5")
+        g.add_agent_class(agents.TS)
+        g.run_experiments(T=2)
+        expected_shape = [300, 5]
+        metrics = g.get_metrics(form="tabular")
+        print(metrics.shape)
+        np.allclose(metrics.shape, expected_shape)
 
     def test_the_game_raise_error_if_get_metrics_works_when_group_by_agent(self):
         game = self.game
@@ -136,7 +147,7 @@ class TestGames(TestCase):
         g.add_agent_class(agents.TS)
         g.run_experiments(T=2)
         expected_reward = [0, 0.3, 0.6]
-        metrics = g.get_metrics(group_by="agent")
+        metrics = g.get_metrics(form="agent")
         avg_reward = metrics["MAB5"]["TS"]["reward_avg"]
         np.allclose(avg_reward, expected_reward)
 
@@ -147,6 +158,6 @@ class TestGames(TestCase):
         g.add_agent_class(agents.TS)
         g.run_experiments(T=2)
         expected_reward = [0, 0.3, 0.6]
-        metrics = g.get_metrics(group_by="world")
+        metrics = g.get_metrics(form="world")
         avg_reward = metrics["MAB5"][0]["TS"]["reward_avg"]
         np.allclose(avg_reward, expected_reward)

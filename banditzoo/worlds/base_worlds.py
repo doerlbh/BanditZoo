@@ -14,6 +14,8 @@ results = w.get_results()
 
 import numpy as np
 
+from .utils import print_progress
+
 
 class World(object):
     """
@@ -66,16 +68,10 @@ class World(object):
                     self.metrics[i], r, self.agents[i]
                 )
             if progress:
-                self.print_progress(t, T)
+                print_progress(t, T)
 
     def get_results(self):
         return self.agents, self.history, self.metrics
-
-    def print_progress(self, t, T, bar_length=20):
-        percent = float(t) * 100 / T
-        arrow = "-" * int(percent / 100 * bar_length - 1) + ">"
-        spaces = " " * (bar_length - len(arrow))
-        print("run progress: [%s%s] %d %%" % (arrow, spaces, percent), end="\r")
 
     def provide_context(self, t):
         raise NotImplementedError
