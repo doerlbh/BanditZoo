@@ -25,7 +25,7 @@ setuptools.setup(
     packages=setuptools.find_packages(where="banditzoo"),
     python_requires=">=3.6",
     install_requires=[
-        "numpy",
+        "numpy>=1.16.5",
         "pandas"
     ],
     test_suite="nose.collector",
