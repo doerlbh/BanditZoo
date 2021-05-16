@@ -95,7 +95,7 @@ class Game(object):
         if len(self.world_pools) == 0:
             raise Exception("Please initiate all the worlds before adding agents.")
         
-        agent_name = kwargs.get("name", None)
+        agent_name = kwargs.get("name", agent_class(**kwargs).name)
         self.agent_names.append(agent_name)
         agent_instances = []
         for i in range(self.M):
@@ -105,6 +105,7 @@ class Game(object):
                 self.agent_pools[k][i][agent_name] = agent_instances
                 self.history_pools[k][i][agent_name] = []
                 self.metrics_pools[k][i][agent_name] = []
+        self.world_add_lock = True
 
     def aggregate_world_metrics(self):
         """Aggregate the metrics in the M dimension (the agent instances).
@@ -112,7 +113,7 @@ class Game(object):
         agg_metrics = {}
         for k in self.world_names:
             agg_metrics[k] = {}
-            metrics_keys = list(self.world_pools[k][0].metrics.keys())
+            metrics_keys = list(self.world_pools[k][0].metrics[0].keys())
             for i in range(self.N):
                 agg_metrics[k][i] = {}
                 for a in self.agent_names:
@@ -134,7 +135,7 @@ class Game(object):
         agg_metrics = {}
         for k in self.world_names:
             agg_metrics[k] = defaultdict(lambda : {})
-            metrics_keys = list(self.world_pools[k][0].metrics.keys())
+            metrics_keys = list(self.world_pools[k][0].metrics[0].keys())
             for i in range(self.N):
                 for a in self.agent_names:
                     agg_metrics[k][a] = defaultdict(lambda : [])
@@ -206,4 +207,4 @@ class Game(object):
         elif group_by == 'world':
             return self.aggregate_world_metrics()
         else:
-            raise ValueError("Please select a supported grouping tag ('agent', 'world')")
+            raise ValueError("Please select a supported grouping tag ('agent', 'world').")

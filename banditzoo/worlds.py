@@ -33,6 +33,7 @@ class World(object):
     def add_agent(self, agent):
         self.history[len(self.agents)] = []
         self.metrics[len(self.agents)] = self.init_metrics()
+        agent.build(**self.get_env_config())
         self.agents.append(agent)
 
     def add_agent_pool(self, agents):
@@ -65,13 +66,13 @@ class World(object):
                     self.metrics[i], r, self.agents[i]
                 )
             if progress:
-                self.print_progress(t)
+                self.print_progress(t, T)
 
     def get_results(self):
         return self.agents, self.history, self.metrics
     
-    def print_progress(self, t, bar_length=20):
-        percent = float(t) * 100 / self.T
+    def print_progress(self, t, T, bar_length=20):
+        percent = float(t) * 100 / T
         arrow = "-" * int(percent / 100 * bar_length - 1) + ">"
         spaces = " " * (bar_length - len(arrow))
         print("run progress: [%s%s] %d %%" % (arrow, spaces, percent), end="\r")
@@ -86,6 +87,9 @@ class World(object):
         raise NotImplementedError
 
     def update_metrics(self, metrics, reward, agent):
+        raise NotImplementedError
+
+    def get_env_config(self):
         raise NotImplementedError
 
 
@@ -122,6 +126,9 @@ class BernoulliMultiArmedBandits(World):
             else:
                 self.cost_means = cost_means
 
+    def get_env_config(self):
+        return {'M' : self.M}
+    
     def provide_context(self, t):
         pass
 
@@ -198,6 +205,9 @@ class ContextualCombinatorialBandits(World):
             else:
                 self.cost_means = cost_means
 
+    def get_env_config(self):
+        return {'K' : self.K, 'N' : self.N, 'C' : self.C}
+    
     def init_metrics(self):
         if self.use_cost:
             return {"reward": [0], "cost": [0]}

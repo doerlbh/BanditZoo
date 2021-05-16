@@ -33,6 +33,13 @@ class TestMultiArmedBanditWorlds(TestCase):
         a = agents.Random(M=5)
         w.add_agent_pool([a, a])
 
+    def test_the_world_can_add_agent_and_build_them(self):
+        world = self.world
+        w = world(M=5)
+        a1 = agents.Random()
+        a2 = agents.TS()
+        w.add_agent_pool([a1, a2])
+          
     def test_the_world_can_filter_agents(self):
         world = self.world
         w = world()

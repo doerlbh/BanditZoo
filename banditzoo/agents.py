@@ -260,16 +260,14 @@ class OGreedy(MultiArmedAgent):
         seed=0,
         **kwargs,
     ):
+        q_start = kwargs.get("q_start", 100)
         MultiArmedAgent.__init__(self, name=name, seed=seed)
         
+        self.q_start = q_start
         self.build(**kwargs)
 
     def build(self, **kwargs):
-        q_start = kwargs.get("q_start", 100)
         MultiArmedAgent.build(self, **kwargs)
-        
-        self.q_start = q_start
-
             
     def act(self):
         self.i_t = np.argmax(self.Q)
@@ -290,16 +288,12 @@ class EGreedy(OGreedy):
         seed=0,
         **kwargs,
     ):
+        epsilon = kwargs.get("epsilon", 0.1)
         OGreedy.__init__(self, name=name, seed=seed)
         
-        self.build(**kwargs)
-        
-    def build(self, **kwargs):
-        epsilon = kwargs.get("epsilon", 0.1)
-        OGreedy.build(self, **kwargs)
-        
         self.epsilon = epsilon
-        
+        self.build(**kwargs)
+                
     def act(self):
         if np.random.uniform() < self.epsilon:
             self.i_t = np.random.choice(self.M)
@@ -327,9 +321,6 @@ class UCB1(OGreedy):
     ):
         OGreedy.__init__(self, name=name, seed=seed)
         self.build(**kwargs)
-        
-    def build(self, **kwargs):
-        OGreedy.build(self, **kwargs)
                 
     def act(self):
         if self.t_t < self.M:
@@ -364,17 +355,16 @@ class CCTS(ContextualCombinatorialAgent):
         seed=0,
         **kwargs,
     ):
+        alpha = kwargs.get("alpha", 0.1)
+        nabla = kwargs.get("nabla", 0.1)
         ContextualCombinatorialAgent.__init__(self, name=name, seed=seed)
 
+        self.alpha = alpha
+        self.nabla = nabla
         self.build(**kwargs)
         
     def build(self, **kwargs):
-        alpha = kwargs.get("alpha", 0.1)
-        nabla = kwargs.get("nabla", 0.1)
         ContextualCombinatorialAgent.build(self, **kwargs)
-        
-        self.alpha = alpha
-        self.nabla = nabla
 
         if self.N is not None:
             self.B_i_k = [n * [np.eye(self.C)] for n in self.N]
@@ -427,8 +417,11 @@ class CCTSB(CCTS, MultiObjectiveAgent):
         seed=0,
         **kwargs,
     ):
+        alpha = kwargs.get("alpha", 0.1)
+        nabla = kwargs.get("nabla", 0.1)
         obj_func = kwargs.get("obj_func", default_obj)
         obj_params = kwargs.get("obj_params", {})
+        CCTS.__init__(self, name=name, seed=seed, alpha=alpha, nabla=nabla)
         MultiObjectiveAgent.__init__(
             self, name=name, seed=seed, obj_func=obj_func, obj_params=obj_params
         )
@@ -466,7 +459,7 @@ class CCMAB(ContextualCombinatorialAgent):
         ContextualCombinatorialAgent.build(self, **kwargs)
 
         if self.N is not None:
-            self.agents = [self.agent_base(M=n) for n in self.N]
+            self.agents = [self.agent_base(C=self.C, M=n) for n in self.N]
 
     def act(self):
         i_t = {}
