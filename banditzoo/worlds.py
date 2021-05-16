@@ -39,19 +39,20 @@ class World(object):
         for a in agents:
             self.add_agent(a)
 
-    def provide_context(self, t):
-        raise NotImplementedError
+    def filter_agent(self, agent_name, get_index=False):
+        if get_index:
+            filtered = [a.name == agent_name for a in self.agents]
+            return np.arange(len(self.agents))[filtered]
+        else:
+            return [a for a in self.agents if a.name == agent_name]
 
-    def assign_reward(self, action):
-        raise NotImplementedError
+    def filter_history(self, agent_name):
+        return [self.history[a] for a in self.filter_agent(agent_name, get_index=True)]
 
-    def init_metrics(self):
-        raise NotImplementedError
+    def filter_metrics(self, agent_name):
+        return [self.metrics[a] for a in self.filter_agent(agent_name, get_index=True)]
 
-    def update_metrics(self, metrics, reward, agent):
-        raise NotImplementedError
-
-    def run_experiments(self, T=1000, progress=False):
+    def run_experiments(self, T, progress=False):
         for t in range(T):
             context = self.provide_context(t)
             for i in range(len(self.agents)):
@@ -68,12 +69,24 @@ class World(object):
 
     def get_results(self):
         return self.agents, self.history, self.metrics
-
+    
     def print_progress(self, t, bar_length=20):
         percent = float(t) * 100 / self.T
-        arrow = "=" * int(percent / 100 * bar_length - 1) + ">"
+        arrow = "-" * int(percent / 100 * bar_length - 1) + ">"
         spaces = " " * (bar_length - len(arrow))
         print("run progress: [%s%s] %d %%" % (arrow, spaces, percent), end="\r")
+
+    def provide_context(self, t):
+        raise NotImplementedError
+
+    def assign_reward(self, action):
+        raise NotImplementedError
+
+    def init_metrics(self):
+        raise NotImplementedError
+
+    def update_metrics(self, metrics, reward, agent):
+        raise NotImplementedError
 
 
 class BernoulliMultiArmedBandits(World):
@@ -83,7 +96,7 @@ class BernoulliMultiArmedBandits(World):
 
     def __init__(
         self,
-        name=None,
+        name="BernoulliMultiArmedBandits",
         seed=0,
         **kwargs,
     ):
@@ -141,7 +154,7 @@ class ContextualCombinatorialBandits(World):
 
     def __init__(
         self,
-        name=None,
+        name="ContextualCombinatorialBandits",
         seed=0,
         **kwargs,
     ):
@@ -242,7 +255,7 @@ class EpidemicControl(ContextualCombinatorialBandits):
 
     def __init__(
         self,
-        name=None,
+        name="EpidemicControl",
         seed=0,
         **kwargs,
     ):
@@ -300,12 +313,14 @@ class EpidemicControl(ContextualCombinatorialBandits):
             self.reward_means, np.eye(self.num_comb_actions)
         )
         reward = self.reward_functions[self._get_action_comb_index(action)]
-        print(action)
-        if self.combinatorial_cost:
-            cost = (self.cost_functions[self._get_action_comb_index(action)],)
+        if self.use_cost:
+            if self.combinatorial_cost:
+                cost = (self.cost_functions[self._get_action_comb_index(action)],)
+            else:
+                cost = self.cost_functions @ self._get_action_one_hot(action)
+            return [reward, cost]
         else:
-            cost = self.cost_functions @ self._get_action_one_hot(action)
-        return [reward, cost]
+            return [reward]
 
 
 class EpidemicControl_v1(EpidemicControl):
@@ -318,7 +333,7 @@ class EpidemicControl_v1(EpidemicControl):
 
     def __init__(
         self,
-        name=None,
+        name="EpidemicControl_v1",
         seed=0,
         **kwargs,
     ):
@@ -335,7 +350,7 @@ class EpidemicControl_v2(EpidemicControl):
 
     def __init__(
         self,
-        name=None,
+        name="EpidemicControl_v2",
         seed=0,
         **kwargs,
     ):

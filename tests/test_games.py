@@ -65,3 +65,25 @@ class TestGames(TestCase):
             "Please initiate all the worlds before adding agents."
             in str(context.exception)
         )
+
+    def test_the_game_raise_error_if_agents_are_assigned_if_lock_is_on(self):
+        game = self.game
+        g = game(M=6, N=10)
+        g.agent_add_lock = True
+        with self.assertRaises(Exception) as context:
+            g.add_agent_class(agents.TS, M=5)
+        self.assertTrue(
+            "No agents can enter anymore"
+            in str(context.exception)
+        )
+
+    def test_the_game_raise_error_if_worlds_are_assigned_if_lock_is_on(self):
+        game = self.game
+        g = game(M=6, N=10)
+        g.world_add_lock = True
+        with self.assertRaises(Exception) as context:
+            g.add_world_class(worlds.BernoulliMultiArmedBandits, M=5, name="MAB5")
+        self.assertTrue(
+            "No worlds can enter anymore"
+            in str(context.exception)
+        )

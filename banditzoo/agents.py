@@ -21,7 +21,7 @@ class Agent(object):
     Base reinforcement learning agent class
     """
 
-    def __init__(self, name=None, seed=0):
+    def __init__(self, name=None, seed=0, **kwargs):
         self.name = name
         self.seed = seed
         np.random.seed(seed)
@@ -31,6 +31,10 @@ class Agent(object):
         self.t_t = 0  # current iteration
 
         self.reward = []  # keep track of rewards
+        self.build(**kwargs)
+
+    def build(self, **kwargs):
+        pass
 
     def observe(self, c):
         self.c_t = c  # update context
@@ -59,21 +63,23 @@ class MultiArmedAgent(Agent):
 
     def __init__(
         self,
-        name=None,
+        name="MultiArmedAgent",
         seed=0,
         **kwargs,
     ):
-        M = kwargs.get("M", None)
         Agent.__init__(self, name=name, seed=seed)
-
+        
+        self.o_arms = []  # keep track of optimal arms
+        self.regret = []  # keep track of regrets
+        self.build(**kwargs)
+        
+    def build(self, **kwargs):
+        M = kwargs.get("M", None)
+        
         self.M = M  # number of possible action arms, e.g. 5
-
         if self.M is not None:
             self.H = [0] * self.M  # the historical time certain arm is pulled
             self.Q = [0] * self.M  # the estimated action Q value
-
-        self.o_arms = []  # keep track of optimal arms
-        self.regret = []  # keep track of regrets
 
     def update_metrics(self, rewards):
         rewards = self.combine_rewards(rewards)
@@ -94,12 +100,16 @@ class ContextualAgent(Agent):
 
     def __init__(
         self,
-        name=None,
+        name="ContextualAgent",
         seed=0,
         **kwargs,
     ):
-        C = kwargs.get("C", None)
         Agent.__init__(self, name=name, seed=seed)
+        
+        self.build(**kwargs)
+        
+    def build(self, **kwargs):
+        C = kwargs.get("C", None)
 
         self.C = C  # dimension of the context, e.g. 100
 
@@ -111,17 +121,20 @@ class CombinatorialAgent(Agent):
 
     def __init__(
         self,
-        name=None,
+        name="CombinatorialAgent",
         seed=0,
         **kwargs,
     ):
+        Agent.__init__(self, name=name, seed=seed)
+        
+        self.build(**kwargs)
+
+    def build(self, **kwargs):
         K = kwargs.get("K", None)
         N = kwargs.get("N", None)
-        Agent.__init__(self, name=name, seed=seed)
-
+        
         self.K = K  # number of possible action dimensions, e.g. 4
         self.N = N  # number of possible values in each action, e.g. [4,4,5,3]
-
 
 class ContextualCombinatorialAgent(CombinatorialAgent, ContextualAgent):
     """
@@ -130,15 +143,20 @@ class ContextualCombinatorialAgent(CombinatorialAgent, ContextualAgent):
 
     def __init__(
         self,
-        name=None,
+        name="ContextualCombinatorialAgent",
         seed=0,
         **kwargs,
     ):
+        CombinatorialAgent.__init__(self, name=name, seed=seed)
+        
+        self.build(**kwargs)
+
+    def build(self, **kwargs):
         K = kwargs.get("K", None)
         N = kwargs.get("N", None)
         C = kwargs.get("C", None)
-        CombinatorialAgent.__init__(self, K=K, N=N, name=name, seed=seed)
-        ContextualAgent.__init__(self, C=C, name=name, seed=seed)
+        CombinatorialAgent.build(self, K=K, N=N)
+        ContextualAgent.build(self, C=C)
 
     def update_metrics(self, rewards):
         rewards = self.combine_rewards(rewards)
@@ -153,7 +171,7 @@ class MultiObjectiveAgent(Agent):
 
     def __init__(
         self,
-        name=None,
+        name="MultiObjectiveAgent",
         seed=0,
         **kwargs,
     ):
@@ -173,6 +191,17 @@ class Random(MultiArmedAgent):
     Random agent to draw multi-armed bandits
     """
 
+    def __init__(
+        self,
+        name="Random",
+        seed=0,
+        **kwargs,
+    ):
+        MultiArmedAgent.__init__(self, name=name, seed=seed, **kwargs)
+    
+    def build(self, **kwargs):
+        MultiArmedAgent.build(self, **kwargs)
+
     def act(self):
         self.i_t = np.random.choice(self.M)
         return self.i_t
@@ -191,17 +220,22 @@ class TS(MultiArmedAgent):
 
     def __init__(
         self,
-        name=None,
+        name="TS",
         seed=0,
         **kwargs,
     ):
-        M = kwargs.get("M", None)
-        MultiArmedAgent.__init__(self, name=name, seed=seed, M=M)
+        MultiArmedAgent.__init__(self, name=name, seed=seed)
+        
+        self.build(**kwargs)
 
+    def build(self, **kwargs):
+        M = kwargs.get("M", None)        
+        MultiArmedAgent.build(self, **kwargs)
+        
         if self.M is not None:
             self.S = [1] * self.M  # success
             self.F = [1] * self.M  # failure
-
+        
     def act(self):
         theta = []
         for i in range(self.M):
@@ -222,16 +256,21 @@ class OGreedy(MultiArmedAgent):
 
     def __init__(
         self,
-        name=None,
+        name="OGreedy",
         seed=0,
         **kwargs,
     ):
-        M = kwargs.get("M", None)
-        q_start = kwargs.get("q_start", 100)
-        MultiArmedAgent.__init__(self, name=name, seed=seed, M=M)
+        MultiArmedAgent.__init__(self, name=name, seed=seed)
+        
+        self.build(**kwargs)
 
+    def build(self, **kwargs):
+        q_start = kwargs.get("q_start", 100)
+        MultiArmedAgent.build(self, **kwargs)
+        
         self.q_start = q_start
 
+            
     def act(self):
         self.i_t = np.argmax(self.Q)
         return self.i_t
@@ -247,17 +286,20 @@ class EGreedy(OGreedy):
 
     def __init__(
         self,
-        name=None,
+        name="EGreedy",
         seed=0,
         **kwargs,
     ):
-        M = kwargs.get("M", None)
-        q_start = kwargs.get("q_start", 100)
+        OGreedy.__init__(self, name=name, seed=seed)
+        
+        self.build(**kwargs)
+        
+    def build(self, **kwargs):
         epsilon = kwargs.get("epsilon", 0.1)
-        OGreedy.__init__(self, name=name, seed=seed, M=M, q_start=q_start)
-
+        OGreedy.build(self, **kwargs)
+        
         self.epsilon = epsilon
-
+        
     def act(self):
         if np.random.uniform() < self.epsilon:
             self.i_t = np.random.choice(self.M)
@@ -277,6 +319,18 @@ class UCB1(OGreedy):
     rules. Advances in applied mathematics, 6(1), 4-22.
     """
 
+    def __init__(
+        self,
+        name="UCB1",
+        seed=0,
+        **kwargs,
+    ):
+        OGreedy.__init__(self, name=name, seed=seed)
+        self.build(**kwargs)
+        
+    def build(self, **kwargs):
+        OGreedy.build(self, **kwargs)
+                
     def act(self):
         if self.t_t < self.M:
             self.i_t = self.t_t
@@ -306,28 +360,29 @@ class CCTS(ContextualCombinatorialAgent):
 
     def __init__(
         self,
-        name=None,
+        name="CCTS",
         seed=0,
         **kwargs,
     ):
-        K = kwargs.get("K", None)
-        N = kwargs.get("N", None)
-        C = kwargs.get("C", None)
+        ContextualCombinatorialAgent.__init__(self, name=name, seed=seed)
+
+        self.build(**kwargs)
+        
+    def build(self, **kwargs):
         alpha = kwargs.get("alpha", 0.1)
         nabla = kwargs.get("nabla", 0.1)
-        ContextualCombinatorialAgent.__init__(self, name=name, seed=seed, K=K, N=N, C=C)
-
+        ContextualCombinatorialAgent.build(self, **kwargs)
+        
         self.alpha = alpha
         self.nabla = nabla
 
         if self.N is not None:
-            self.B_i_k = [n * [np.eye(C)] for n in self.N]
-            self.z_i_k = [n * [np.zeros((C))] for n in self.N]
-            self.theta_i_k = [n * [np.zeros((C))] for n in self.N]
-
+            self.B_i_k = [n * [np.eye(self.C)] for n in self.N]
+            self.z_i_k = [n * [np.zeros((self.C))] for n in self.N]
+            self.theta_i_k = [n * [np.zeros((self.C))] for n in self.N]
+                    
     def act(self):
         sample_theta = [n * [0] for n in self.N]
-        # print(sample_theta)
         i_t = {}
         for k in range(self.K):
 
@@ -336,8 +391,6 @@ class CCTS(ContextualCombinatorialAgent):
                     self.theta_i_k[k][i],
                     self.alpha ** 2 * np.linalg.pinv(self.B_i_k[k][i]),
                 )
-            #     print(sample_theta[k][i])
-            # print(self.c_t, self.c_t.T @ np.array(sample_theta[k]).T)
 
             i_t[k] = np.argmax((self.c_t.T @ np.array(sample_theta[k]).T))
 
@@ -370,25 +423,22 @@ class CCTSB(CCTS, MultiObjectiveAgent):
 
     def __init__(
         self,
-        name=None,
+        name="CCTSB",
         seed=0,
         **kwargs,
     ):
-        K = kwargs.get("K", None)
-        N = kwargs.get("N", None)
-        C = kwargs.get("C", None)
-        alpha = kwargs.get("alpha", 0.1)
-        nabla = kwargs.get("nabla", 0.1)
         obj_func = kwargs.get("obj_func", default_obj)
         obj_params = kwargs.get("obj_params", {})
-        CCTS.__init__(
-            self, name=name, seed=seed, K=K, N=N, C=C, alpha=alpha, nabla=nabla
-        )
         MultiObjectiveAgent.__init__(
             self, name=name, seed=seed, obj_func=obj_func, obj_params=obj_params
         )
+        
+        self.build(**kwargs)
 
-
+    def build(self, **kwargs):
+        CCTS.build(self, **kwargs)
+        
+        
 class CCMAB(ContextualCombinatorialAgent):
     """
     Independent MAB or Contextual Bandit agents to solve the contextual combinatorial bandit problem
@@ -402,17 +452,18 @@ class CCMAB(ContextualCombinatorialAgent):
 
     def __init__(
         self,
-        name=None,
+        name="CCMAB",
         seed=0,
         **kwargs,
     ):
-        K = kwargs.get("K", None)
-        N = kwargs.get("N", None)
-        C = kwargs.get("C", None)
-        agent_base = kwargs.get("agent_base", UCB1)
-        ContextualCombinatorialAgent.__init__(self, K=K, N=N, C=C, name=name, seed=seed)
+        agent_base = kwargs.get('agent_base', UCB1)
+        ContextualCombinatorialAgent.__init__(self, name=name, seed=seed)
 
         self.agent_base = agent_base
+        self.build(**kwargs)
+
+    def build(self, **kwargs):
+        ContextualCombinatorialAgent.build(self, **kwargs)
 
         if self.N is not None:
             self.agents = [self.agent_base(M=n) for n in self.N]
@@ -445,24 +496,34 @@ class CCMABB(CCMAB, MultiObjectiveAgent):
 
     def __init__(
         self,
-        name=None,
+        name="CCMABB",
         seed=0,
         **kwargs,
     ):
-        K = kwargs.get("K", None)
-        N = kwargs.get("N", None)
-        C = kwargs.get("C", None)
         agent_base = kwargs.get("agent_base", UCB1)
         obj_func = kwargs.get("obj_func", default_obj)
         obj_params = kwargs.get("obj_params", {})
-        CCMAB.__init__(self, K=K, N=N, C=C, agent_base=agent_base, name=name, seed=seed)
-        MultiObjectiveAgent.__init__(self, obj_func=obj_func, obj_params=obj_params)
+        CCMAB.__init__(self, agent_base=agent_base, name=name, seed=seed)
+        MultiObjectiveAgent.__init__(self, obj_func=obj_func, obj_params=obj_params, name=name, seed=seed)
+        
+        self.build(**kwargs)
+
+    def build(self, **kwargs):
+        CCMAB.build(self, **kwargs)
 
 
 class CombRandom(ContextualCombinatorialAgent):
     """
     Random agent that performs combinatorial actions randomly at each round
     """
+
+    def __init__(
+        self,
+        name="CombRandom",
+        seed=0,
+        **kwargs,
+    ):
+        ContextualCombinatorialAgent.__init__(self, name=name, seed=seed, **kwargs)
 
     def act(self):
         i_t = {}
@@ -479,6 +540,14 @@ class CombRandomFixed(ContextualCombinatorialAgent):
     """
     Random agent that performs a set of fixed combinatorial actions
     """
+
+    def __init__(
+        self,
+        name="CombRandomFixed",
+        seed=0,
+        **kwargs,
+    ):
+        ContextualCombinatorialAgent.__init__(self, name=name, seed=seed, **kwargs)
 
     def act(self):
         if self.i_t is None:
