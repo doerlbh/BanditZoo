@@ -104,3 +104,12 @@ class TestCombinatorialWorlds(TestCase):
         w.add_agent(a1)
         w.add_agent(a2)
         w.run_experiments(T=10)
+
+    def test_the_world_can_run_with_combinatorial_cost(self):
+        world = self.world
+        w = world(K=2, N=[3, 4], C=12, combinatorial_cost=True)
+        a1 = agents.CCTSB()
+        a2 = agents.CombRandom()
+        w.add_agent(a1)
+        w.add_agent(a2)
+        w.run_experiments(T=10)

@@ -22,17 +22,21 @@ class MultiArmedAgent(Agent):
     ):
         Agent.__init__(self, name=name, seed=seed)
 
-        self.o_arms = []  # keep track of optimal arms
         self.regret = []  # keep track of regrets
         self.build(**kwargs)
 
     def build(self, **kwargs):
         M = kwargs.get("M", None)
+        oracle = kwargs.get("oracle", None)
 
         self.M = M  # number of possible action arms, e.g. 5
         if self.M is not None:
             self.H = [0] * self.M  # the historical time certain arm is pulled
             self.Q = [0] * self.M  # the estimated action Q value
+            if oracle is not None:
+                self.oracle = oracle  # the reward function, only to compute regret
+            else:
+                self.oracle = [0] * self.M
 
     def update_metrics(self, rewards):
         rewards = self.combine_rewards(rewards)
@@ -41,9 +45,10 @@ class MultiArmedAgent(Agent):
             self.H[self.i_t] + 1
         )
         self.H[self.i_t] += 1
-        self.o_arms.append(np.argmax(self.Q))
         self.reward.append(rewards)
-        self.regret.append(np.max(self.Q) * self.t_t - np.sum(self.reward))
+        self.regret.append(
+            (np.max(self.oracle) * self.t_t - np.sum(self.reward)) / self.t_t
+        )
 
 
 class ContextualAgent(Agent):
@@ -65,6 +70,16 @@ class ContextualAgent(Agent):
         C = kwargs.get("C", None)
 
         self.C = C  # dimension of the context, e.g. 100
+
+    def update_metrics(self, rewards):
+        rewards = self.combine_rewards(rewards)
+        self.t_t += 1
+        # self.Q[self.i_t] = (self.Q[self.i_t] * self.H[self.i_t] + rewards) / (
+        #     self.H[self.i_t] + 1
+        # )
+        # self.H[self.i_t] += 1
+        self.reward.append(rewards)
+        # self.regret.append((np.max(self.oracle) * self.t_t - np.sum(self.reward)) / self.t_t )
 
 
 class CombinatorialAgent(Agent):
@@ -289,6 +304,106 @@ class UCB1(OGreedy):
         pass
 
 
+class CTS(ContextualAgent):
+    """
+    Contextual Thompson Sampling algorithm.
+
+    Reference: Agrawal, S., & Goyal, N. (2013, May). Thompson sampling for contextual bandits
+    with linear payoffs. In International Conference on Machine Learning (pp. 127-135). PMLR.
+    """
+
+    def __init__(
+        self,
+        name="CTS",
+        seed=0,
+        **kwargs,
+    ):
+        alpha = kwargs.get("alpha", 0.1)
+        nabla = kwargs.get("nabla", 1.0)
+        ContextualAgent.__init__(self, name=name, seed=seed)
+
+        self.alpha = alpha
+        self.nabla = nabla
+        self.build(**kwargs)
+
+    def build(self, **kwargs):
+        M = kwargs.get("M", None)
+        ContextualAgent.build(self, **kwargs)
+
+        self.M = M
+        if self.M is not None and self.C is not None:
+            self.B_i = self.M * [np.eye(self.C)]
+            self.z_i = self.M * [np.zeros((self.C))]
+            self.theta_i = self.M * [np.zeros((self.C))]
+
+    def act(self):
+        sample_theta = self.M * [0]
+        for i in range(self.M):
+            sample_theta[i] = np.random.multivariate_normal(
+                self.theta_i[i],
+                self.alpha ** 2 * np.linalg.pinv(self.B_i[i]),
+            )
+        self.i_t = np.argmax((self.c_t.T @ np.array(sample_theta).T))
+        return self.i_t
+
+    def update_agent(self, rewards):
+        rewards = self.combine_rewards(rewards)
+        i = self.i_t
+        self.B_i[i] = self.nabla * self.B_i[i] + self.c_t @ self.c_t.T
+        self.z_i[i] += self.c_t * rewards
+        self.theta_i[i] = np.linalg.pinv(self.B_i[i]) @ self.z_i[i]
+
+
+class LinUCB(ContextualAgent):
+    """
+    Linear Upper Confidence Bound (LinUCB) algorithm.
+
+    Reference: Chu, W., Li, L., Reyzin, L., & Schapire, R. (2011, June). Contextual bandits
+    with linear payoff functions. In Proceedings of the Fourteenth International Conference
+    on Artificial Intelligence and Statistics (pp. 208-214). JMLR Workshop and Conference
+    Proceedings.
+    """
+
+    def __init__(
+        self,
+        name="LinUCB",
+        seed=0,
+        **kwargs,
+    ):
+        alpha = kwargs.get("alpha", 0.1)
+        nabla = kwargs.get("nabla", 1.0)
+        ContextualAgent.__init__(self, name=name, seed=seed)
+
+        self.alpha = alpha
+        self.nabla = nabla
+        self.build(**kwargs)
+
+    def build(self, **kwargs):
+        M = kwargs.get("M", None)
+        ContextualAgent.build(self, **kwargs)
+
+        self.M = M
+        if self.M is not None and self.C is not None:
+            self.A_i = self.M * [np.eye(self.C)]
+            self.b_i = self.M * [np.zeros((self.C))]
+
+    def act(self):
+        p_t = self.M * [0]
+        for i in range(self.M):
+            theta_i = np.linalg.pinv(self.A_i[i]) @ self.b_i[i]
+            p_t[i] = theta_i.T @ self.c_t + self.alpha * np.sqrt(
+                self.c_t.T @ np.linalg.pinv(self.A_i[i]) @ self.c_t
+            )
+        self.i_t = np.argmax(p_t)
+        return self.i_t
+
+    def update_agent(self, rewards):
+        rewards = self.combine_rewards(rewards)
+        i = self.i_t
+        self.A_i[i] = self.nabla * self.A_i[i] + self.c_t @ self.c_t.T
+        self.b_i[i] += self.c_t * rewards
+
+
 class CCTS(ContextualCombinatorialAgent):
     """
     Contextual Combinatorial Thompson Sampling.
@@ -310,7 +425,7 @@ class CCTS(ContextualCombinatorialAgent):
         **kwargs,
     ):
         alpha = kwargs.get("alpha", 0.1)
-        nabla = kwargs.get("nabla", 0.1)
+        nabla = kwargs.get("nabla", 1.0)
         ContextualCombinatorialAgent.__init__(self, name=name, seed=seed)
 
         self.alpha = alpha
@@ -355,7 +470,7 @@ class CCTSB(CCTS, MultiObjectiveAgent):
     Contextual Combinatorial Thompson Sampling with Budget.
 
     Reference: Lin, B., & Bouneffouf, D. (2021). Contextual Combinatorial Bandit with Budget as
-    Context for Pareto Optimal Epidemic Intervention. arXiv preprint arXiv:.
+    Context for Pareto Optimal Epidemic Control. arXiv preprint arXiv:.
 
     usage:
     bandit = CCTSB(K=5, N=[4,3,3,4,5], C=100, alpha=0.5, nabla=0.5, obj_func=obj_func,
@@ -372,7 +487,7 @@ class CCTSB(CCTS, MultiObjectiveAgent):
         **kwargs,
     ):
         alpha = kwargs.get("alpha", 0.1)
-        nabla = kwargs.get("nabla", 0.1)
+        nabla = kwargs.get("nabla", 1.0)
         obj_func = kwargs.get("obj_func", default_obj)
         obj_params = kwargs.get("obj_params", {})
         CCTS.__init__(self, name=name, seed=seed, alpha=alpha, nabla=nabla)
@@ -389,6 +504,9 @@ class CCTSB(CCTS, MultiObjectiveAgent):
 class CCMAB(ContextualCombinatorialAgent):
     """
     Independent MAB or Contextual Bandit agents to solve the contextual combinatorial bandit problem.
+
+    Reference: Lin, B., & Bouneffouf, D. (2021). Contextual Combinatorial Bandit with Budget as
+    Context for Pareto Optimal Epidemic Control. arXiv preprint arXiv:.
 
     usage:
     bandit = CCMAB(K=5, N=[4,3,3,4,5], C=100, agent_base=UCB1, name='CCMAB-UCB1', seed=0)
@@ -413,7 +531,12 @@ class CCMAB(ContextualCombinatorialAgent):
         ContextualCombinatorialAgent.build(self, **kwargs)
 
         if self.N is not None:
-            self.agents = [self.agent_base(C=self.C, M=n) for n in self.N]
+            self.agents = [self.agent_base(M=n, C=self.C) for n in self.N]
+
+    def observe(self, c):
+        self.c_t = c  # update context
+        for k in range(self.K):
+            self.agents[k].observe(self.c_t)
 
     def act(self):
         i_t = {}

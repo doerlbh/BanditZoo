@@ -18,6 +18,8 @@ from banditzoo import agents
         {"agent": agents.OGreedy},
         {"agent": agents.EGreedy},
         {"agent": agents.UCB1},
+        {"agent": agents.CTS},
+        {"agent": agents.LinUCB},
         {"agent": agents.CCTS},
         {"agent": agents.CCTSB},
         {"agent": agents.CCMAB},
@@ -52,6 +54,31 @@ class TestMultiArmedAgents(TestCase):
         a = self.agent(M=5)
         action = a.act()
         reward = 1
+        a.update(reward)
+
+
+@parameterized_class(
+    [
+        {"agent": agents.CTS},
+        {"agent": agents.LinUCB},
+    ]
+)
+class TestContextualAgents(TestCase):
+    def test_the_agent_can_initialize(self):
+        a = self.agent(M=3, C=10)
+
+    def test_the_agent_can_act(self):
+        a = self.agent(M=3, C=10)
+        context = np.arange(10)
+        a.observe(context)
+        action = a.act()
+
+    def test_the_agent_can_update(self):
+        a = self.agent(M=3, C=10)
+        context = np.arange(10)
+        a.observe(context)
+        action = a.act()
+        reward = [10]
         a.update(reward)
 
 
@@ -96,6 +123,6 @@ class TestUtils(TestCase):
         rewards = [1, 2]
         w = 0.5
         obj_params = {"w": w}
-        r = agents.utils.budget_obj(rewards, obj_params)
+        r = agents.utils.budget_obj_v1(rewards, obj_params)
         expected_r = w * rewards[0] + (1 - w) / rewards[1]
         self.assertEqual(expected_r, expected_r)

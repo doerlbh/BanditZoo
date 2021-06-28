@@ -9,6 +9,7 @@ from banditzoo import games, worlds, agents
 @parameterized_class(
     [
         {"game": games.Game},
+        {"game": games.MultiObjectiveGame},
     ]
 )
 class TestGames(TestCase):
@@ -129,7 +130,7 @@ class TestGames(TestCase):
             in str(context.exception)
         )
 
-    def test_the_game_raise_error_if_get_metrics_works_in_tabular_form(self):
+    def test_if_get_metrics_works_in_tabular_form(self):
         game = self.game
         g = game(M=10, N=10)
         g.add_world_class(worlds.BernoulliMultiArmedBandits, M=5, name="MAB5")
@@ -137,10 +138,9 @@ class TestGames(TestCase):
         g.run_experiments(T=2)
         expected_shape = [300, 5]
         metrics = g.get_metrics(form="tabular")
-        print(metrics.shape)
         np.allclose(metrics.shape, expected_shape)
 
-    def test_the_game_raise_error_if_get_metrics_works_when_group_by_agent(self):
+    def test_if_get_metrics_works_when_group_by_agent(self):
         game = self.game
         g = game(M=10, N=10)
         g.add_world_class(worlds.BernoulliMultiArmedBandits, M=5, name="MAB5")
@@ -151,7 +151,7 @@ class TestGames(TestCase):
         avg_reward = metrics["MAB5"]["TS"]["reward_avg"]
         np.allclose(avg_reward, expected_reward)
 
-    def test_the_game_raise_error_if_get_metrics_works_when_group_by_world(self):
+    def test_if_get_metrics_works_when_group_by_world(self):
         game = self.game
         g = game(M=10, N=10)
         g.add_world_class(worlds.BernoulliMultiArmedBandits, M=5, name="MAB5")
@@ -161,3 +161,89 @@ class TestGames(TestCase):
         metrics = g.get_metrics(form="world")
         avg_reward = metrics["MAB5"][0]["TS"]["reward_avg"]
         np.allclose(avg_reward, expected_reward)
+
+
+@parameterized_class(
+    [
+        {"game": games.MultiObjectiveGame},
+    ]
+)
+class TestMultiObjectiveGames(TestCase):
+    def test_the_game_can_set_params_search_to_multiple_worlds(self):
+        game = self.game
+        g = game(M=2, N=2)
+        g.add_world_class(worlds.EpidemicControl_v1, K=1, N=[2], C=2, name="EpidemicA")
+        g.add_world_class(worlds.EpidemicControl_v1, K=2, N=[2,2], C=4, name="EpidemicB")
+        g.add_agent_class(agents.CCTSB)
+        g.add_agent_class(agents.CCMABB, agent_base=agents.UCB1)
+        g.set_params_sweep(W=[0,0.5,1])
+
+    def test_the_game_can_set_multiple_params_search_to_multiple_worlds(self):
+        game = self.game
+        g = game(M=2, N=2)
+        g.add_world_class(worlds.EpidemicControl_v1, K=1, N=[2], C=2, name="EpidemicA")
+        g.add_world_class(worlds.EpidemicControl_v1, K=2, N=[2,2], C=4, name="EpidemicB")
+        g.add_agent_class(agents.CCTSB)
+        g.add_agent_class(agents.CCMABB, agent_base=agents.UCB1)
+        g.set_params_sweep(W=[0,0.5,1], DUMMY=[1,2])
+
+    def test_the_game_can_run_with_different_obj_params(self):
+        game = self.game
+        g = game(M=2, N=2)
+        g.add_world_class(worlds.EpidemicControl_v1, K=1, N=[2], C=2, name="EpidemicA")
+        g.add_world_class(worlds.EpidemicControl_v1, K=2, N=[2,2], C=4, name="EpidemicB")
+        g.add_agent_class(agents.CCTSB)
+        g.add_agent_class(agents.CCMABB, agent_base=agents.UCB1)
+        g.set_params_sweep(W=[0,0.5,1], DUMMY=[1,2])
+        g.run_experiments(T=10)
+
+    def test_the_game_raise_error_if_agents_are_set_params_before_assigned(self):
+        game = self.game
+        g = game(M=2, N=2)
+        g.add_world_class(worlds.EpidemicControl_v1, K=1, N=[2], C=2, name="EpidemicA")
+        g.add_world_class(worlds.EpidemicControl_v1, K=2, N=[2,2], C=4, name="EpidemicB")
+        with self.assertRaises(Exception) as context:
+            g.set_agent_params(W=0)
+        self.assertTrue(
+            "Please initiate all the agents before setting objective params."
+            in str(context.exception)
+        )
+
+    def test_the_game_raise_error_if_agents_are_set_params_without_params(self):
+        game = self.game
+        g = game(M=2, N=2)
+        g.add_world_class(worlds.EpidemicControl_v1, K=1, N=[2], C=2, name="EpidemicA")
+        g.add_world_class(worlds.EpidemicControl_v1, K=2, N=[2,2], C=4, name="EpidemicB")
+        g.add_agent_class(agents.CCTSB)
+        with self.assertRaises(Exception) as context:
+            g.set_agent_params()
+        self.assertTrue(
+            "Please have at least one objective function parameters to set."
+            in str(context.exception)
+        )
+
+    def test_the_game_raise_error_if_pareto_are_computed_without_params_set(self):
+        game = self.game
+        g = game(M=2, N=2)
+        g.add_world_class(worlds.EpidemicControl_v1, K=1, N=[2], C=2, name="EpidemicA")
+        g.add_agent_class(agents.CCMABB, agent_base=agents.UCB1)
+        g.run_experiments(T=10)
+        with self.assertRaises(Exception) as context:
+            g.get_pareto_metrics()
+        self.assertTrue(
+            "There is no objective function parameters to construct the pareto frontier."
+            in str(context.exception)
+        )
+
+    def test_if_get_pareto_metrics_works_in_tabular_form(self):
+        game = self.game
+        g = game(M=2, N=2)
+        g.add_world_class(worlds.EpidemicControl_v1, K=1, N=[2], C=2, name="EpidemicA")
+        g.add_agent_class(agents.CCTSB)
+        g.add_agent_class(agents.CCMABB, agent_base=agents.UCB1)
+        g.set_params_sweep(W=[0,0.5,1], DUMMY=[1,2])
+        g.run_experiments(T=2)
+        expected_shape = [96, 7]
+        metrics = g.get_pareto_metrics()
+        print(metrics.shape)
+        np.allclose(metrics.shape, expected_shape)

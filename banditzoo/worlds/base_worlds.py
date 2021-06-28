@@ -23,6 +23,12 @@ class World(object):
     """
 
     def __init__(self, name=None, seed=0):
+        """Initialize the base world object.
+
+        Args:
+            name (str, optional): [world name]. Defaults to None.
+            seed (int, optional): [random seed]. Defaults to 0.
+        """
 
         self.name = name
         self.seed = seed
@@ -33,16 +39,35 @@ class World(object):
         self.metrics = {}
 
     def add_agent(self, agent):
+        """Enter agent into the world.
+
+        Args:
+            agent (banditzoo.agents class object): [an agent instance].
+        """
         self.history[len(self.agents)] = []
         self.metrics[len(self.agents)] = self.init_metrics()
         agent.build(**self.get_env_config())
         self.agents.append(agent)
 
     def add_agent_pool(self, agents):
+        """Enter a pool of agents into the world.
+
+        Args:
+            agents (list of banditzoo.agents objects): [a list of agent instances]
+        """
         for a in agents:
             self.add_agent(a)
 
     def filter_agent(self, agent_name, get_index=False):
+        """Filter agent given an agent name.
+
+        Args:
+            agent_name (str): [the agent name].
+            get_index (bool, optional): [whether to return the agent indices or instances]. Defaults to False.
+
+        Returns:
+            [list of banditzoo.agents objects]: [a list of agent instances or indices that matches the agent name].
+        """
         if get_index:
             filtered = [a.name == agent_name for a in self.agents]
             return np.arange(len(self.agents))[filtered]

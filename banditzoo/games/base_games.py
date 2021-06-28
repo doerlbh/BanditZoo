@@ -228,7 +228,7 @@ class Game(object):
                 agent instances) and not the world instances. Defaults to 'tabular'.
 
         Returns:
-            [dict]: [the aggregated metrics of the agents].
+            [dict, pd.DataFrame]: [the aggregated metrics of the agents].
 
         Raises:
             ValueError: [if the game has started, no new agent can enter].

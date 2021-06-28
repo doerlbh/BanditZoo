@@ -20,7 +20,7 @@ def default_obj(rewards, obj_params):
     return np.sum(rewards)
 
 
-def budget_obj(rewards, obj_params):
+def budget_obj_v1(rewards, obj_params):
     """the combined reward functions that balances a reward and a cost.
 
     Args:
@@ -33,3 +33,18 @@ def budget_obj(rewards, obj_params):
     reward, cost = rewards
     w = obj_params.get("w", 0.5)
     return w * reward + (1 - w) / cost
+
+
+def budget_obj_v2(rewards, obj_params):
+    """the combined reward functions that balances a reward and a cost.
+
+    Args:
+        rewards (Any): the reward feedback signals
+        obj_params (Dict[str, Any]): the parameters to balance among different rewards
+
+    Returns:
+        [Any]: a combined reward functions modulated by the weight
+    """
+    reward, cost = rewards
+    w = obj_params.get("w", 0.5)
+    return w * reward - (1 - w) * cost

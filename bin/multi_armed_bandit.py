@@ -2,42 +2,34 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-import matplotlib.pyplot as plt
-from banditzoo.agents import Random, TS, OGreedy, EGreedy, UCB1
-from banditzoo.worlds import BernoulliMultiArmedBandits
+import seaborn as sns
+from banditzoo import agents
+from banditzoo import worlds
+from banditzoo import games
 
 
-def plot_results(results):
-    plt.ion()  # turn on interactive mode
-    agents, actions, metrics = results
-    for i in range(len(metrics)):
-        rewards = metrics[i]["reward"]
-        plt.plot(np.arange(len(rewards)), rewards, label=agents[i].name)
-    plt.legend()
-    plt.savefig("mab_reward_test.png")
-    plt.close()
-    for i in range(len(metrics)):
-        rewards = metrics[i]["regret"]
-        plt.plot(np.arange(len(rewards)), rewards, label=agents[i].name)
-    plt.legend()
-    plt.savefig("mab_regret_test.png")
+def plot_results(metrics):
+    metric_names = ["reward", "regret"]
+    for m in metric_names:
+        sns_plot = sns.relplot(
+            data=metrics, x="time", y=m, hue="agent", col="world", kind="line", ci=68
+        )
+        sns_plot.savefig("mab_" + m + "_test.png")
 
 
 def mab():
-    M = 30
-    reward_means = None
-    cost_means = None
-    w = BernoulliMultiArmedBandits(M=M, reward_means=reward_means, name="MAB")
-    rd = Random(M=M, name="Random")
-    ts = TS(M=M, name="Thompson Sampling")
-    og = OGreedy(M=M, name="Optimistic Greedy")
-    eg = EGreedy(M=M, name="Epsilon Greedy")
-    ucb1 = UCB1(M=M, name="UCB1")
-    for a in [rd, ts, og, eg, ucb1]:
-        w.add_agent(a)
-    w.run_experiments(T=10000)
-    results = w.get_results()
-    plot_results(results)
+    g = games.Game(N=3, M=10)
+    g.add_world_class(worlds.BernoulliMultiArmedBandits, M=5, name="MAB5")
+    g.add_world_class(worlds.BernoulliMultiArmedBandits, M=3, name="MAB3")
+    g.add_agent_class(agents.TS, name="Thompson Sampling")
+    g.add_agent_class(agents.UCB1, name="UCB1")
+    g.add_agent_class(agents.EGreedy, epsilon=0.05, name="Epsilon Greedy (e=0.05)")
+    g.add_agent_class(agents.EGreedy, epsilon=0.1, name="Epsilon Greedy (e=0.1)")
+    g.add_agent_class(agents.EGreedy, epsilon=0.2, name="Epsilon Greedy (e=0.2)")
+    g.add_agent_class(agents.Random, name="Random")
+    g.run_experiments(T=100, progress=True)
+    metrics = g.get_metrics(form="tabular")
+    plot_results(metrics)
 
 
 def main():
