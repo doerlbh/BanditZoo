@@ -176,7 +176,7 @@ class TestMultiObjectiveGames(TestCase):
         g.add_world_class(worlds.EpidemicControl_v1, K=2, N=[2,2], C=4, name="EpidemicB")
         g.add_agent_class(agents.CCTSB)
         g.add_agent_class(agents.CCMABB, agent_base=agents.UCB1)
-        g.set_params_sweep(W=[0,0.5,1])
+        g.set_params_sweep(w=[0,0.5,1])
 
     def test_the_game_can_set_multiple_params_search_to_multiple_worlds(self):
         game = self.game
@@ -185,7 +185,7 @@ class TestMultiObjectiveGames(TestCase):
         g.add_world_class(worlds.EpidemicControl_v1, K=2, N=[2,2], C=4, name="EpidemicB")
         g.add_agent_class(agents.CCTSB)
         g.add_agent_class(agents.CCMABB, agent_base=agents.UCB1)
-        g.set_params_sweep(W=[0,0.5,1], DUMMY=[1,2])
+        g.set_params_sweep(w=[0,0.5,1], dummy=[1,2])
 
     def test_the_game_can_run_with_different_obj_params(self):
         game = self.game
@@ -194,7 +194,7 @@ class TestMultiObjectiveGames(TestCase):
         g.add_world_class(worlds.EpidemicControl_v1, K=2, N=[2,2], C=4, name="EpidemicB")
         g.add_agent_class(agents.CCTSB)
         g.add_agent_class(agents.CCMABB, agent_base=agents.UCB1)
-        g.set_params_sweep(W=[0,0.5,1], DUMMY=[1,2])
+        g.set_params_sweep(w=[0,0.5,1], dummy=[1,2])
         g.run_experiments(T=10)
 
     def test_the_game_raise_error_if_agents_are_set_params_before_assigned(self):
@@ -203,7 +203,7 @@ class TestMultiObjectiveGames(TestCase):
         g.add_world_class(worlds.EpidemicControl_v1, K=1, N=[2], C=2, name="EpidemicA")
         g.add_world_class(worlds.EpidemicControl_v1, K=2, N=[2,2], C=4, name="EpidemicB")
         with self.assertRaises(Exception) as context:
-            g.set_agent_params(W=0)
+            g.set_agent_params(w=0)
         self.assertTrue(
             "Please initiate all the agents before setting objective params."
             in str(context.exception)
@@ -241,9 +241,9 @@ class TestMultiObjectiveGames(TestCase):
         g.add_world_class(worlds.EpidemicControl_v1, K=1, N=[2], C=2, name="EpidemicA")
         g.add_agent_class(agents.CCTSB)
         g.add_agent_class(agents.CCMABB, agent_base=agents.UCB1)
-        g.set_params_sweep(W=[0,0.5,1], DUMMY=[1,2])
+        g.set_params_sweep(w=[0,0.5,1], dummy=[1,2])
         g.run_experiments(T=2)
         expected_shape = [96, 7]
-        metrics = g.get_pareto_metrics()
+        metrics = g.get_pareto_metrics(nbins=10)
         print(metrics.shape)
         np.allclose(metrics.shape, expected_shape)
