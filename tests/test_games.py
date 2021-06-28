@@ -242,8 +242,8 @@ class TestMultiObjectiveGames(TestCase):
         g.add_agent_class(agents.CCTSB)
         g.add_agent_class(agents.CCMABB, agent_base=agents.UCB1)
         g.set_params_sweep(w=[0,0.5,1], dummy=[1,2])
-        g.run_experiments(T=2)
+        g.run_experiments(T=20)
         expected_shape = [96, 7]
-        metrics = g.get_pareto_metrics(nbins=10)
+        metrics = g.get_pareto_metrics(quantile_bin=True,nbins=3)
         print(metrics.shape)
         np.allclose(metrics.shape, expected_shape)
