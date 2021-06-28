@@ -408,8 +408,8 @@ class CCTS(ContextualCombinatorialAgent):
     """
     Contextual Combinatorial Thompson Sampling.
 
-    Reference: Lin, B., & Bouneffouf, D. (2021). Contextual Combinatorial Bandit with Budget as
-    Context for Pareto Optimal Epidemic Intervention. arXiv preprint arXiv:.
+    Reference: Lin, B., & Bouneffouf, D. (2021). Optimal Epidemic Control as a Contextual
+    Combinatorial Bandit with Budget. arXiv preprint arXiv:.
 
     usage:
     bandit = CCTS(K=5, N=[4,3,3,4,5], C=100, alpha=0.5, nabla=0.5, name='CCTS', seed=0)
@@ -469,8 +469,8 @@ class CCTSB(CCTS, MultiObjectiveAgent):
     """
     Contextual Combinatorial Thompson Sampling with Budget.
 
-    Reference: Lin, B., & Bouneffouf, D. (2021). Contextual Combinatorial Bandit with Budget as
-    Context for Pareto Optimal Epidemic Control. arXiv preprint arXiv:.
+    Reference: Lin, B., & Bouneffouf, D. (2021). Optimal Epidemic Control as a Contextual
+    Combinatorial Bandit with Budget. arXiv preprint arXiv:.
 
     usage:
     bandit = CCTSB(K=5, N=[4,3,3,4,5], C=100, alpha=0.5, nabla=0.5, obj_func=obj_func,
@@ -505,8 +505,8 @@ class CCMAB(ContextualCombinatorialAgent):
     """
     Independent MAB or Contextual Bandit agents to solve the contextual combinatorial bandit problem.
 
-    Reference: Lin, B., & Bouneffouf, D. (2021). Contextual Combinatorial Bandit with Budget as
-    Context for Pareto Optimal Epidemic Control. arXiv preprint arXiv:.
+    Reference: Lin, B., & Bouneffouf, D. (2021). Optimal Epidemic Control as a Contextual
+    Combinatorial Bandit with Budget. arXiv preprint arXiv:.
 
     usage:
     bandit = CCMAB(K=5, N=[4,3,3,4,5], C=100, agent_base=UCB1, name='CCMAB-UCB1', seed=0)
@@ -555,6 +555,9 @@ class CCMABB(CCMAB, MultiObjectiveAgent):
     """
     Independent MAB or Contextual Bandit agents to solve the contextual combinatorial bandit
     problem with multiple objectives in the rewards.
+
+    Reference: Lin, B., & Bouneffouf, D. (2021). Optimal Epidemic Control as a Contextual
+    Combinatorial Bandit with Budget. arXiv preprint arXiv:.
 
     usage:
     bandit = CCMABB(K=5, N=[4,3,3,4,5], C=100, agent_base=UCB1, obj_func=obj_func,

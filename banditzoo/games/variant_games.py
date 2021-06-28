@@ -160,7 +160,7 @@ class MultiObjectiveGame(Game):
                 agent instances) and not the world instances. Defaults to 'tabular'.
 
         Returns:
-            [dict, pd.DataFrame]: [the aggregated metrics of the agents in different 
+            [dict, pd.DataFrame]: [the aggregated metrics of the agents in different
                 objective params]. If no params have been specified, the returns the
                 metrics for the default game instance.
 
@@ -180,7 +180,7 @@ class MultiObjectiveGame(Game):
         Args:
             quantile_bin (bool, optional): [whether to use quantile in quantization]
             nbins (int, optional): [number of bins in the quantization].
-            
+
         Returns:
             [pd.DataFrame]: [the aggregated metrics of the agents in different objective params].
 
@@ -198,4 +198,6 @@ class MultiObjectiveGame(Game):
             for p_key, p_val in json.loads(g_params).items():
                 m_df[p_key] = [p_val] * m_df.shape[0]
             m_dfs.append(m_df)
-        return quantize_metrics(pd.concat(m_dfs, ignore_index=True), quantile_bin, nbins)
+        return quantize_metrics(
+            pd.concat(m_dfs, ignore_index=True), quantile_bin, nbins
+        )

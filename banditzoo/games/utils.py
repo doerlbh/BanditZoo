@@ -36,13 +36,13 @@ def quantize_metrics(df, quantile_bin=False, nbins=20):
     df["reward_bins"] = [None] * len(df)
     df["cost_bins"] = [None] * len(df)
     for a in df["agent"].unique():
-        selected = df["agent"]==a
+        selected = df["agent"] == a
         if quantile_bin:
-            df.loc[selected,"reward_bins"] = pd.cut(df[selected]["reward"], bins=nbins)
-            df.loc[selected,"cost_bins"] = pd.cut(df[selected]["cost"], bins=nbins)
+            df.loc[selected, "reward_bins"] = pd.cut(df[selected]["reward"], bins=nbins)
+            df.loc[selected, "cost_bins"] = pd.cut(df[selected]["cost"], bins=nbins)
         else:
-            df.loc[selected,"reward_bins"] = pd.qcut(df[selected]["reward"], q=nbins)
-            df.loc[selected,"cost_bins"] = pd.qcut(df[selected]["cost"], q=nbins)        
-    df['reward_'] =df.groupby('reward_bins')['reward'].transform("mean")
-    df['cost_'] =df.groupby('cost_bins')['cost'].transform("mean")
+            df.loc[selected, "reward_bins"] = pd.qcut(df[selected]["reward"], q=nbins)
+            df.loc[selected, "cost_bins"] = pd.qcut(df[selected]["cost"], q=nbins)
+    df["reward_"] = df.groupby("reward_bins")["reward"].transform("mean")
+    df["cost_"] = df.groupby("cost_bins")["cost"].transform("mean")
     return df
