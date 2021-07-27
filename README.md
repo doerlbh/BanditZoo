@@ -4,4 +4,4 @@
 
 Python package of bandits and RL agents in different real-world environments
 
-Created by [Baihan Lin](http://www.columbia.edu/~bl2681/), Columbia University
+Created by [Baihan Lin](www.baihan.nyc), Columbia University

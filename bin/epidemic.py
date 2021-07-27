@@ -38,7 +38,7 @@ def epidemic_setup(N, M, w):
         N=[2, 3],
         C=5,
         reward_scale=1,
-        name="Epidemic Simulation (constant)",
+        name="Epidemic (constant context)",
     )
     g.add_world_class(
         worlds.EpidemicControl_v2,
@@ -46,7 +46,7 @@ def epidemic_setup(N, M, w):
         N=[2, 3],
         C=5,
         reward_scale=1,
-        name="Epidemic Simulation (change every 10 days)",
+        name="Epidemic (context changes every 10 days)",
     )
     g.add_world_class(
         worlds.EpidemicControl_v2,
@@ -54,7 +54,7 @@ def epidemic_setup(N, M, w):
         N=[2, 3],
         C=5,
         change_every=1,
-        name="Epidemic Simulation (change every 1 day)",
+        name="Epidemic (context changes every 1 day)",
     )
     g.add_agent_class(
         agents.CCTSB,

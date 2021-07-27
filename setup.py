@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="banditzoo",
-    version="0.0.3",
+    version="0.0.4",
     author="Baihan Lin",
     author_email="doerlbh@gmail.com",
     description="Python library of bandits and RL agents in different real-world environments",
@@ -17,10 +17,10 @@ setuptools.setup(
     },
     classifiers=[
         "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: MIT License",
+        "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
         "Operating System :: OS Independent",
     ],
-    license="MIT",
+    license="GPLv3",
     package_dir={"": "banditzoo"},
     packages=setuptools.find_packages(where="banditzoo"),
     python_requires=">=3.6",
