@@ -404,7 +404,7 @@ class LinUCB(ContextualAgent):
         self.b_i[i] += self.c_t * rewards
 
 
-class BerlinUCB(LinUCB):
+# TODO class BerlinUCB(LinUCB):
 
 
 

@@ -133,3 +133,4 @@ dmypy.json
 
 # testing files
 *test.png
+*test.ipynb
