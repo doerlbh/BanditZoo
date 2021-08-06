@@ -1,3 +1,17 @@
+# Copyright 2021 Baihan Lin
+#
+# Licensed under the GNU General Public License, Version 3.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.gnu.org/licenses/gpl-3.0.en.html
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -12,6 +26,7 @@ w.run_experiments(T=1000)
 results = w.get_results()
 """
 
+from abc import abstractmethod
 import numpy as np
 
 from .utils import print_progress
@@ -98,17 +113,22 @@ class World(object):
     def get_results(self):
         return self.agents, self.history, self.metrics
 
-    def provide_context(self, t):
+    @abstractmethod
+    def provide_context(self):
         raise NotImplementedError
 
-    def assign_reward(self, action):
+    @abstractmethod
+    def assign_reward(self):
         raise NotImplementedError
 
+    @abstractmethod
     def init_metrics(self):
         raise NotImplementedError
 
-    def update_metrics(self, metrics, reward, agent):
+    @abstractmethod
+    def update_metrics(self):
         raise NotImplementedError
 
+    @abstractmethod
     def get_env_config(self):
         raise NotImplementedError
