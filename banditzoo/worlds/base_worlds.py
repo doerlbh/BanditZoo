@@ -60,7 +60,7 @@ class World(object):
             agent (banditzoo.agents class object): [an agent instance].
         """
         self.history[len(self.agents)] = []
-        self.metrics[len(self.agents)] = self.init_metrics()
+        self.metrics[len(self.agents)] = self._init_metrics()
         agent.build(**self.get_env_config())
         self.agents.append(agent)
 
@@ -97,15 +97,15 @@ class World(object):
 
     def run_experiments(self, T, progress=False):
         for t in range(T):
-            context = self.provide_context(t)
+            context = self._provide_contexts(t)
             for i in range(len(self.agents)):
                 self.agents[i].observe(context)
                 a = self.agents[i].act()
                 self.history[i].append(a)
-                r = self.assign_reward(a)
-                self.agents[i].update(r)
-                self.metrics[i] = self.update_metrics(
-                    self.metrics[i], r, self.agents[i]
+                feedback = self._assign_feedbacks(a)
+                self.agents[i].update(feedback)
+                self.metrics[i] = self._update_metrics(
+                    self.metrics[i], feedback, self.agents[i]
                 )
             if progress:
                 print_progress(t, T)
@@ -114,19 +114,19 @@ class World(object):
         return self.agents, self.history, self.metrics
 
     @abstractmethod
-    def provide_context(self):
+    def _provide_contexts(self):
         raise NotImplementedError
 
     @abstractmethod
-    def assign_reward(self):
+    def _assign_feedbacks(self):
         raise NotImplementedError
 
     @abstractmethod
-    def init_metrics(self):
+    def _init_metrics(self):
         raise NotImplementedError
 
     @abstractmethod
-    def update_metrics(self):
+    def _update_metrics(self):
         raise NotImplementedError
 
     @abstractmethod

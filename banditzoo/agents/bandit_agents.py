@@ -52,14 +52,14 @@ class MultiArmedAgent(Agent):
             else:
                 self.oracle = [0] * self.M
 
-    def update_metrics(self, rewards):
-        rewards = self.combine_rewards(rewards)
+    def _update_metrics(self, feedbacks):
+        reward = self.combine_feedbacks(feedbacks)
         self.t_t += 1
-        self.Q[self.i_t] = (self.Q[self.i_t] * self.H[self.i_t] + rewards) / (
+        self.Q[self.i_t] = (self.Q[self.i_t] * self.H[self.i_t] + reward) / (
             self.H[self.i_t] + 1
         )
         self.H[self.i_t] += 1
-        self.reward.append(rewards)
+        self.reward.append(reward)
         self.regret.append(
             (np.max(self.oracle) * self.t_t - np.sum(self.reward)) / self.t_t
         )
@@ -85,14 +85,14 @@ class ContextualAgent(Agent):
 
         self.C = C  # dimension of the context, e.g. 100
 
-    def update_metrics(self, rewards):
-        rewards = self.combine_rewards(rewards)
+    def _update_metrics(self, feedbacks):
+        feedbacks = self.combine_feedbacks(feedbacks)
         self.t_t += 1
-        # self.Q[self.i_t] = (self.Q[self.i_t] * self.H[self.i_t] + rewards) / (
+        # self.Q[self.i_t] = (self.Q[self.i_t] * self.H[self.i_t] + feedbacks) / (
         #     self.H[self.i_t] + 1
         # )
         # self.H[self.i_t] += 1
-        self.reward.append(rewards)
+        self.reward.append(feedbacks)
         # self.regret.append((np.max(self.oracle) * self.t_t - np.sum(self.reward)) / self.t_t )
 
 
@@ -141,32 +141,10 @@ class ContextualCombinatorialAgent(CombinatorialAgent, ContextualAgent):
         CombinatorialAgent.build(self, K=K, N=N)
         ContextualAgent.build(self, C=C)
 
-    def update_metrics(self, rewards):
-        rewards = self.combine_rewards(rewards)
+    def _update_metrics(self, feedbacks):
+        feedbacks = self.combine_feedbacks(feedbacks)
         self.t_t += 1
-        self.reward.append(rewards)
-
-
-class MultiObjectiveAgent(Agent):
-    """
-    Base agent that learns from multiple reward signals.
-    """
-
-    def __init__(
-        self,
-        name="MultiObjectiveAgent",
-        seed=0,
-        **kwargs,
-    ):
-        obj_func = kwargs.get("obj_func", default_obj)
-        obj_params = kwargs.get("obj_params", {})
-        Agent.__init__(self, name=name, seed=seed)
-
-        self.obj_func = obj_func  # the combined objective function
-        self.obj_params = obj_params  # the params to compute objective function
-
-    def combine_rewards(self, rewards=None):
-        return self.obj_func(rewards, self.obj_params)
+        self.reward.append(feedbacks)
 
 
 class Random(MultiArmedAgent):
@@ -189,7 +167,7 @@ class Random(MultiArmedAgent):
         self.i_t = np.random.choice(self.M)
         return self.i_t
 
-    def update_agent(self, rewards=None):
+    def _update_agent(self, feedbacks=None):
         pass
 
 
@@ -226,10 +204,10 @@ class TS(MultiArmedAgent):
         self.i_t = np.argmax(theta)
         return self.i_t
 
-    def update_agent(self, rewards=None):
-        rewards = self.combine_rewards(rewards)
-        self.S[self.i_t] += rewards
-        self.F[self.i_t] += 1 - rewards
+    def _update_agent(self, feedbacks=None):
+        feedbacks = self.combine_feedbacks(feedbacks)
+        self.S[self.i_t] += feedbacks
+        self.F[self.i_t] += 1 - feedbacks
 
 
 class OGreedy(MultiArmedAgent):
@@ -256,7 +234,7 @@ class OGreedy(MultiArmedAgent):
         self.i_t = np.argmax(self.Q)
         return self.i_t
 
-    def update_agent(self, rewards=None):
+    def _update_agent(self, feedbacks=None):
         pass
 
 
@@ -284,7 +262,7 @@ class EGreedy(OGreedy):
             self.i_t = np.argmax(self.Q)
         return self.i_t
 
-    def update_agent(self, rewards=None):
+    def _update_agent(self, feedbacks=None):
         pass
 
 
@@ -314,7 +292,7 @@ class UCB1(OGreedy):
             )
         return self.i_t
 
-    def update_agent(self, rewards=None):
+    def _update_agent(self, feedbacks=None):
         pass
 
 
@@ -360,11 +338,11 @@ class CTS(ContextualAgent):
         self.i_t = np.argmax((self.c_t.T @ np.array(sample_theta).T))
         return self.i_t
 
-    def update_agent(self, rewards):
-        rewards = self.combine_rewards(rewards)
+    def _update_agent(self, feedbacks):
+        feedbacks = self.combine_feedbacks(feedbacks)
         i = self.i_t
         self.B_i[i] = self.nabla * self.B_i[i] + self.c_t @ self.c_t.T
-        self.z_i[i] += self.c_t * rewards
+        self.z_i[i] += self.c_t * feedbacks
         self.theta_i[i] = np.linalg.pinv(self.B_i[i]) @ self.z_i[i]
 
 
@@ -411,16 +389,14 @@ class LinUCB(ContextualAgent):
         self.i_t = np.argmax(p_t)
         return self.i_t
 
-    def update_agent(self, rewards):
-        rewards = self.combine_rewards(rewards)
+    def _update_agent(self, feedbacks):
+        feedbacks = self.combine_feedbacks(feedbacks)
         i = self.i_t
         self.A_i[i] = self.nabla * self.A_i[i] + self.c_t @ self.c_t.T
-        self.b_i[i] += self.c_t * rewards
+        self.b_i[i] += self.c_t * feedbacks
 
 
 # TODO class BerlinUCB(LinUCB):
-
-
 
 
 class CCTS(ContextualCombinatorialAgent):
@@ -434,7 +410,7 @@ class CCTS(ContextualCombinatorialAgent):
     bandit = CCTS(K=5, N=[4,3,3,4,5], C=100, alpha=0.5, nabla=0.5, name='CCTS', seed=0)
     bandit.observe(context)
     actions = bandit.act()
-    bandit.update(reward,cost)
+    bandit.update(feedbacks)
     """
 
     def __init__(
@@ -475,16 +451,16 @@ class CCTS(ContextualCombinatorialAgent):
         self.i_t = i_t
         return self.i_t
 
-    def update_agent(self, rewards):
-        rewards = self.combine_rewards(rewards)
+    def _update_agent(self, feedbacks):
+        feedbacks = self.combine_feedbacks(feedbacks)
         for k in range(self.K):
             i = self.i_t[k]
             self.B_i_k[k][i] = self.nabla * self.B_i_k[k][i] + self.c_t @ self.c_t.T
-            self.z_i_k[k][i] += self.c_t * rewards
+            self.z_i_k[k][i] += self.c_t * feedbacks
             self.theta_i_k[k][i] = np.linalg.pinv(self.B_i_k[k][i]) @ self.z_i_k[k][i]
 
 
-class CCTSB(CCTS, MultiObjectiveAgent):
+class CCTSB(CCTS):
     """
     Contextual Combinatorial Thompson Sampling with Budget.
 
@@ -496,7 +472,7 @@ class CCTSB(CCTS, MultiObjectiveAgent):
         obj_params=obj_params name='CCTSB', seed=0)
     bandit.observe(context)
     actions = bandit.act()
-    bandit.update(reward,cost)
+    bandit.update(feedbacks)
     """
 
     def __init__(
@@ -509,10 +485,7 @@ class CCTSB(CCTS, MultiObjectiveAgent):
         nabla = kwargs.get("nabla", 1.0)
         obj_func = kwargs.get("obj_func", default_obj)
         obj_params = kwargs.get("obj_params", {})
-        CCTS.__init__(self, name=name, seed=seed, alpha=alpha, nabla=nabla)
-        MultiObjectiveAgent.__init__(
-            self, name=name, seed=seed, obj_func=obj_func, obj_params=obj_params
-        )
+        CCTS.__init__(self, name=name, seed=seed, alpha=alpha, nabla=nabla, obj_func=obj_func, obj_params=obj_params)
 
         self.build(**kwargs)
 
@@ -531,7 +504,7 @@ class CCMAB(ContextualCombinatorialAgent):
     bandit = CCMAB(K=5, N=[4,3,3,4,5], C=100, agent_base=UCB1, name='CCMAB-UCB1', seed=0)
     bandit.observe(context)
     actions = bandit.act()
-    bandit.update(reward,cost)
+    bandit.update(feedbacks)
     """
 
     def __init__(
@@ -564,16 +537,15 @@ class CCMAB(ContextualCombinatorialAgent):
         self.i_t = i_t
         return self.i_t
 
-    def update_agent(self, rewards):
-        rewards = self.combine_rewards(rewards)
+    def _update_agent(self, feedbacks):
         for k in range(self.K):
-            self.agents[k].update(rewards)
+            self.agents[k].update(feedbacks)
 
 
-class CCMABB(CCMAB, MultiObjectiveAgent):
+class CCMABB(CCMAB):
     """
     Independent MAB or Contextual Bandit agents to solve the contextual combinatorial bandit
-    problem with multiple objectives in the rewards.
+    problem with multiple objectives in the feedbacks.
 
     Reference: Lin, B., & Bouneffouf, D. (2021). Optimal Epidemic Control as a Contextual
     Combinatorial Bandit with Budget. arXiv preprint arXiv:2106.15808.
@@ -583,7 +555,7 @@ class CCMABB(CCMAB, MultiObjectiveAgent):
         obj_params=obj_params, name='CCMABB-UCB1', seed=0)
     bandit.observe(context)
     actions = bandit.act()
-    bandit.update(reward,cost)
+    bandit.update(feedbacks)
     """
 
     def __init__(
@@ -595,10 +567,7 @@ class CCMABB(CCMAB, MultiObjectiveAgent):
         agent_base = kwargs.get("agent_base", UCB1)
         obj_func = kwargs.get("obj_func", default_obj)
         obj_params = kwargs.get("obj_params", {})
-        CCMAB.__init__(self, agent_base=agent_base, name=name, seed=seed)
-        MultiObjectiveAgent.__init__(
-            self, obj_func=obj_func, obj_params=obj_params, name=name, seed=seed
-        )
+        CCMAB.__init__(self, agent_base=agent_base, obj_func=obj_func, obj_params=obj_params, name=name, seed=seed)
 
         self.build(**kwargs)
 
@@ -626,7 +595,7 @@ class CombRandom(ContextualCombinatorialAgent):
         self.i_t = i_t
         return self.i_t
 
-    def update_agent(self, rewards=None):
+    def _update_agent(self, feedbacks=None):
         pass
 
 
@@ -651,5 +620,5 @@ class CombRandomFixed(ContextualCombinatorialAgent):
             self.i_t = i_t
         return self.i_t
 
-    def update_agent(self, rewards=None):
+    def _update_agent(self, feedbacks=None):
         pass

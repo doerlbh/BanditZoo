@@ -23,17 +23,20 @@ a = Agent()
 a.observe(context)
 actions = a.act()
 ...
-a.update(reward,cost)
+a.update(feedbacks)
 """
 
 from abc import abstractmethod
 import numpy as np
+from .utils import default_obj
+
 
 from typing import (
     Any,
     List,
     Dict,
     Optional,
+    Callable,
 )
 
 
@@ -42,11 +45,11 @@ class IOAgent(object):
     Base agent with IO functions
     """
 
-    def __init__(self, load: bool=False, fpath: Optional[str]=None):
+    def __init__(self, load: bool = False, fpath: Optional[str] = None):
         if load:
             self.load(fpath)
-    
-    def load(self, fpath: Optional[str]=None):
+
+    def load(self, fpath: Optional[str] = None):
         """[summary]
 
         Args:
@@ -55,10 +58,10 @@ class IOAgent(object):
         Raises:
             NotImplementedError: [description]
         """
-        #TODO
+        # TODO
         raise NotImplementedError
 
-    def save(self, fpath: Optional[str]=None):
+    def save(self, fpath: Optional[str] = None):
         """[summary]
 
         Args:
@@ -67,24 +70,24 @@ class IOAgent(object):
         Raises:
             NotImplementedError: [description]
         """
-        #TODO
+        # TODO
         raise NotImplementedError
-    
+
 
 class OnlineAgent(object):
     """
     Base online reinforcement learning agent class
     """
-    
+
     def __init__(self):
-        
+
         self.i_t = None  # current action
         self.c_t = None  # current context
         self.t_t = 0  # current iteration
 
         self.reward = []  # keep track of rewards
 
-    def observe(self, c: Optional[np.ndarray]=None):
+    def observe(self, c: Optional[np.ndarray] = None):
         """[summary]
 
         Args:
@@ -92,64 +95,84 @@ class OnlineAgent(object):
         """
         self.c_t = c  # update context
 
-    def update(self, rewards:  Optional[List[Any]] =None):
+    def update(self, feedbacks: Optional[List[Any]] = None):
         """[summary]
 
         Args:
-            rewards (Optional[List[Any]], optional): [description]. Defaults to None.
+            feedbacks (Optional[List[Any]], optional): [description]. Defaults to None.
         """
-        self.update_agent(rewards)
-        self.update_metrics(rewards)
+        self._update_agent(feedbacks)
+        self._update_metrics(feedbacks)
 
     @abstractmethod
     def act(self):
         raise NotImplementedError
 
     @abstractmethod
-    def update_agent(self):
+    def _update_agent(self):
         raise NotImplementedError
 
     @abstractmethod
-    def update_metrics(self):
+    def _update_metrics(self):
         raise NotImplementedError
- 
- 
+
+
 class OfflineAgent(object):
     """
     Base online reinforcement learning agent class
     """
-    
+
     @abstractmethod
-    def fit(self):    
-        raise NotImplementedError   
+    def fit(self):
+        raise NotImplementedError
+
+    @abstractmethod
+    def predict(self):
+        raise NotImplementedError
+
+
+class MultiObjectiveAgent(object):
+    """
+    Base agent that learns from multiple feedback signals.
+    """
+
+    def __init__(
+        self,
+        obj_func: Callable = default_obj,
+        obj_params: Dict[str, Any] = {},
+        **kwargs,
+    ):
+        self.obj_func = obj_func  # the combined objective function
+        self.obj_params = obj_params  # the params to compute objective function
+
+    def combine_feedbacks(self, feedbacks: Dict[str, Any]) -> float:
+        return self.obj_func(feedbacks, self.obj_params)
     
-class Agent(IOAgent, OnlineAgent, OfflineAgent):
+class Agent(IOAgent, OnlineAgent, OfflineAgent, MultiObjectiveAgent):
     """
     Base reinforcement learning agent class
     """
 
-    def __init__(self, seed: int =0, load: bool =False, name: Optional[str]=None, fpath:Optional[str]=None, **kwargs: Optional[Dict[str, Any]]):
+    def __init__(
+        self,
+        seed: int = 0,
+        load: bool = False,
+        obj_func: Callable = default_obj,
+        obj_params: Dict[str, Any] = {},
+        name: Optional[str] = None,
+        fpath: Optional[str] = None,
+        **kwargs: Optional[Dict[str, Any]]
+    ):
         IOAgent.__init__(self, load=load, fpath=fpath)
         OnlineAgent.__init__(self)
-        
+        MultiObjectiveAgent.__init__(self, obj_func=obj_func, obj_params=obj_params)
+
         self.name = name
         self.seed = seed
         np.random.seed(seed)
 
         self.build(**kwargs)
 
-    def combine_rewards(self, rewards: Optional[List[Any]] =None) -> float:
-        """[summary]
-
-        Args:
-            rewards (Optional[List[Any]], optional): [description]. Defaults to None.
-
-        Returns:
-            float: [description]
-        """
-        return np.sum(rewards)
-    
     @abstractmethod
     def build(self):
         pass
-

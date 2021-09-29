@@ -18,9 +18,32 @@
 utils functions and classes related to worlds
 """
 
+import numpy as np
 
-def print_progress(t, T, bar_length=20):
+def print_progress(t: int, T: int, bar_length: int=20):
     percent = float(t) * 100 / T
     arrow = "-" * int(percent / 100 * bar_length - 1) + ">"
     spaces = " " * (bar_length - len(arrow))
     print("run progress: [%s%s] %d %%" % (arrow, spaces, percent), end="\r")
+
+def check_and_correct_dimensions(name: str, means: np.ndarray, stds: np.ndarray, dimension: int, target_dimension: int):
+    # TODO add tests
+    if not np.array_equal(means.shape, stds.shape): 
+        raise ValueError(
+                "Please specify the same shape for " + name + " means and stds, now " \
+                    + str(means.shape) + " and " +  + str(stds.shape) 
+            )
+    if means.ndim == target_dimension - 1:
+        means = np.expand_dims(means, -1)
+        stds = np.expand_dims(stds, -1)
+            
+    if dimension != means.shape[-1]:
+        if dimension !=  target_dimension - 1: 
+            raise ValueError(
+                "Please specify the same shape for " + name + "dimension and the " \
+                        + "dimensions of its mean, now " + str(dimension) \
+                            + " and " +  + str(means.shape[-1]) 
+                )
+        dimension = means.shape[-1]
+        
+    return means, stds, dimension

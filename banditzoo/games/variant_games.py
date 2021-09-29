@@ -108,25 +108,25 @@ class MultiObjectiveGame(Game):
         else:
             return Game.get_tabular_metrics(self)
 
-    def aggregate_world_metrics(self):
+    def _aggregate_world_metrics(self):
         """Aggregate the metrics in the M dimension (the agent instances)."""
         if self.params_lock:
             return {
-                g_params: g.aggregate_world_metrics()
+                g_params: g._aggregate_world_metrics()
                 for g_params, g in self.games.items()
             }
         else:
-            return Game.aggregate_world_metrics(self)
+            return Game._aggregate_world_metrics(self)
 
-    def aggregate_agent_metrics(self):
+    def _aggregate_agent_metrics(self):
         """Aggregate the metrics in both M and N dimensions (world and agent instances)."""
         if self.params_lock:
             return {
-                g_params: g.aggregate_agent_metrics()
+                g_params: g._aggregate_agent_metrics()
                 for g_params, g in self.games.items()
             }
         else:
-            return Game.aggregate_agent_metrics(self)
+            return Game._aggregate_agent_metrics(self)
 
     def run_experiments(self, T, progress=False):
         """Run the game with certain iterations.

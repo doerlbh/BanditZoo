@@ -44,7 +44,6 @@ class EpidemicControl(ContextualCombinatorialBandits):
         C = kwargs.get("C", 15)
         reward_means = kwargs.get("reward_means", None)
         cost_means = kwargs.get("cost_means", None)
-        use_cost = kwargs.get("use_cost", True)
         combinatorial_cost = kwargs.get("combinatorial_cost", False)
         reward_scale = kwargs.get("reward_scale", 1)
         cost_scale = kwargs.get("cost_scale", 1)
@@ -55,7 +54,6 @@ class EpidemicControl(ContextualCombinatorialBandits):
             C=C,
             reward_means=reward_means,
             cost_means=cost_means,
-            use_cost=use_cost,
             combinatorial_cost=combinatorial_cost,
             reward_scale=reward_scale,
             cost_scale=cost_scale,
@@ -80,7 +78,7 @@ class EpidemicControl(ContextualCombinatorialBandits):
         # Say, if temperature is another useful measurement for disease spread, we can
         # add it as our 7th feature in the context.
 
-    def provide_context(self, t):
+    def _provide_contexts(self, t):
         context = np.random.random(self.C)
         self.cost_functions = np.random.multivariate_normal(
             self.cost_means, np.eye(self.cost_dimension)
@@ -88,19 +86,18 @@ class EpidemicControl(ContextualCombinatorialBandits):
         context[: self.cost_dimension] = self.cost_functions
         return context
 
-    def assign_reward(self, action):
+    def _assign_feedbacks(self, action):
         self.reward_functions = np.random.multivariate_normal(
             self.reward_means, np.eye(self.num_comb_actions)
         )
         reward = self.reward_functions[self._get_action_comb_index(action)]
-        if self.use_cost:
-            if self.combinatorial_cost:
-                cost = self.cost_functions[self._get_action_comb_index(action)]
-            else:
-                cost = self.cost_functions @ self._get_action_one_hot(action)
-            return [reward, cost]
+        if self.combinatorial_cost:
+            cost = self.cost_functions[self._get_action_comb_index(action)]
         else:
-            return [reward]
+            cost = self.cost_functions @ self._get_action_one_hot(action)
+        rewards = [reward]
+        costs = [cost]
+        return {"rewards" : rewards, "costs": costs}
 
 
 class EpidemicControl_v1(EpidemicControl):
@@ -156,7 +153,7 @@ class EpidemicControl_v2(EpidemicControl):
         )
         self.change_every = change_every
 
-    def provide_context(self, t):
+    def _provide_contexts(self, t):
         context = np.random.random(self.C)
         if t // self.change_every == 0:
             np.random.shuffle(self.cost_means)

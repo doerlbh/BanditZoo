@@ -53,8 +53,8 @@ class TestMultiArmedAgents(TestCase):
     def test_the_agent_can_update(self):
         a = self.agent(M=5)
         action = a.act()
-        reward = 1
-        a.update(reward)
+        feedbacks = {"rewards": 1}
+        a.update(feedbacks)
 
 
 @parameterized_class(
@@ -78,8 +78,8 @@ class TestContextualAgents(TestCase):
         context = np.arange(10)
         a.observe(context)
         action = a.act()
-        reward = [10]
-        a.update(reward)
+        feedbacks = {"rewards": 10}
+        a.update(feedbacks)
 
 
 @parameterized_class(
@@ -107,22 +107,22 @@ class TestContextualCombinatorialAgents(TestCase):
         context = np.arange(12)
         a.observe(context)
         action = a.act()
-        reward = [10]
-        a.update(reward)
+        feedbacks = {"rewards": 10}
+        a.update(feedbacks)
 
 
 class TestUtils(TestCase):
     def test_the_default_obj_works(self):
-        rewards = [1, 2]
+        rewards = {"rewards": [1],"costs": [2]}
         obj_params = {}
         r = agents.utils.default_obj(rewards, obj_params)
-        expected_r = 3
+        expected_r = 1.5
         self.assertEqual(expected_r, expected_r)
 
     def test_the_default_obj_works(self):
-        rewards = [1, 2]
+        rewards = {"rewards": [1],"costs": [2]}
         w = 0.5
         obj_params = {"w": w}
         r = agents.utils.budget_obj_v1(rewards, obj_params)
-        expected_r = w * rewards[0] + (1 - w) / rewards[1]
+        expected_r = w * np.mean(rewards["rewards"]) + (1 - w) / np.mean(rewards["costs"])
         self.assertEqual(expected_r, expected_r)

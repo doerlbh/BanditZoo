@@ -76,31 +76,36 @@ def epidemic_setup(N, M, w):
     return g
 
 
-def epidemic_extreme(N, M, T, condition):
+def epidemic_extreme(N, M, T, condition, plot=True):
     g = epidemic_setup(N=N, M=M, w=condition)
     g.set_params_sweep(w=[condition])
     g.run_experiments(T=T, progress=True)
     metrics = g.get_pareto_metrics()
     metrics["budget"] = metrics["cost_"]
     metrics["cases"] = np.exp(-metrics["reward_"] / metrics["reward_"].mean())
-    plot_results(metrics, condition)
+    if plot:
+        plot_results(metrics, condition)
 
 
-def epidemic_pareto(N, M, T):
+def epidemic_pareto(N, M, T, plot=True):
     g = epidemic_setup(N=N, M=M, w=0.5)
     g.set_params_sweep(w=[0, 0.25, 0.5, 0.75, 1])
     g.run_experiments(T=T, progress=True)
     metrics = g.get_pareto_metrics()
     metrics["budget"] = metrics["cost_"]
     metrics["cases"] = np.exp(-metrics["reward_"] / metrics["reward_"].mean())
-    plot_pareto(metrics)
-
+    if plot:
+        plot_pareto(metrics)
 
 def main():
     epidemic_extreme(N=2, M=100, T=1000, condition=1)
     epidemic_extreme(N=2, M=100, T=1000, condition=0)
     epidemic_pareto(N=1, M=100, T=1000)
 
+def test():
+    epidemic_extreme(N=2, M=2, T=2, condition=1, plot=False)
+    epidemic_extreme(N=2, M=2, T=2, condition=0, plot=False)
+    epidemic_pareto(N=1, M=2, T=2, plot=False)
 
 if __name__ == "__main__":
     main()

@@ -9,6 +9,7 @@ from banditzoo import worlds, agents
 @parameterized_class(
     [
         {"world": worlds.World},
+        {"world": worlds.MultiArmedBandits},
         {"world": worlds.BernoulliMultiArmedBandits},
         {"world": worlds.ContextualCombinatorialBandits},
         {"world": worlds.EpidemicControl},
@@ -61,6 +62,7 @@ class TestMultiArmedBanditWorlds(TestCase):
 
 @parameterized_class(
     [
+        {"world": worlds.MultiArmedBandits},
         {"world": worlds.BernoulliMultiArmedBandits},
     ]
 )
@@ -76,7 +78,7 @@ class TestMultiArmedBanditWorlds(TestCase):
         world = self.world
         w = world(M=5)
         a1 = agents.Random(M=5)
-        a2 = agents.TS(M=5)
+        a2 = agents.UCB1(M=5)
         w.add_agent(a1)
         w.add_agent(a2)
         w.run_experiments(T=10)

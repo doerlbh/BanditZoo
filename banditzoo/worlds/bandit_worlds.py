@@ -21,11 +21,71 @@ Classes of real-world bandit environments.
 import numpy as np
 
 from .base_worlds import World
+from .utils import check_and_correct_dimensions
 
 
-class BernoulliMultiArmedBandits(World):
+class MultiArmedBandits(World):
     """
-    Multi-Armed Bandits Problem with Bernoulli rewards
+    Multi-Armed Bandits Problem with Gaussian Rewards
+    """
+
+    def __init__(
+        self,
+        name="MultiArmedBandits",
+        seed=0,
+        **kwargs,
+    ):
+        M = kwargs.get("M", 5)  # number of arms
+        reward_means = kwargs.get("reward_means", None)
+        reward_stds = kwargs.get("reward_stds", None)
+        reward_scale = kwargs.get("reward_scale", 1)
+        reward_dimension = kwargs.get("reward_dimension", 1)
+        cost_means = kwargs.get("cost_means", None)
+        cost_stds = kwargs.get("cost_stds", None)
+        cost_scale = kwargs.get("cost_scale", 0)
+        cost_dimension = kwargs.get("cost_dimension", 1)
+        World.__init__(self, name=name, seed=seed)
+
+        self.M = M
+        self.reward_functions = None
+        self.cost_functions = None
+        self.reward_means = np.array(reward_means) or np.random.uniform(0, reward_scale, (self.M, reward_dimension))
+        self.reward_stds = np.array(reward_stds) or np.random.uniform(0, reward_scale, (self.M,reward_dimension))
+        self.cost_means = np.array(cost_means) or np.random.uniform(0, cost_scale, (self.M,cost_dimension))
+        self.cost_stds = np.array(cost_stds) or np.random.uniform(0, cost_scale, (self.M,cost_dimension))
+   
+        self.reward_means , self.reward_stds, self.reward_dimension = check_and_correct_dimensions("reward", self.reward_means , self.reward_stds, reward_dimension, 2)
+        self.cost_means , self.cost_stds, self.cost_dimension = check_and_correct_dimensions("cost", self.cost_means , self.cost_stds, cost_dimension, 2)        
+            
+    def get_env_config(self):
+        return {"M": self.M,
+                "reward_dimension": self.reward_dimension,
+                "reward_means": self.reward_means,
+                "reward_stds": self.reward_stds}
+
+    def _provide_contexts(self, t):
+        pass
+
+    def _assign_feedbacks(self, action):
+        self.reward_functions = [np.random.multivariate_normal(self.reward_means[:,i], np.diag(self.reward_stds[:,i])) for i in range(self.reward_dimension)] 
+        rewards = [r[action] for r in self.reward_functions]
+        self.cost_functions = [np.random.multivariate_normal(self.cost_means[:,i], np.diag(self.cost_stds[:,i])) for i in range(self.cost_dimension)] 
+        costs = [c[action] for c in self.cost_functions]
+        return {"rewards" : rewards, "costs": costs}
+    
+    def _init_metrics(self):
+        return {"reward": [0], "regret": [0], "cost": [0]}
+
+    def _update_metrics(self, metrics, feedbacks, agent):
+        metrics["reward"].append(metrics["reward"][-1] + np.mean(feedbacks["rewards"])) # TODO decide how to aggregate
+        metrics["cost"].append(metrics["cost"][-1] + np.mean(feedbacks["costs"])) # TODO decide how to aggregate
+        metrics["regret"].append(agent.regret[-1])
+        return metrics
+
+
+class BernoulliMultiArmedBandits(MultiArmedBandits):
+    """
+    Multi-Armed Bandits Problem with Bernoulli Rewards
     """
 
     def __init__(
@@ -34,54 +94,14 @@ class BernoulliMultiArmedBandits(World):
         seed=0,
         **kwargs,
     ):
-        M = kwargs.get("M", 5)  # number of arms
-        use_cost = kwargs.get("use_cost", False)
-        reward_means = kwargs.get("reward_means", None)
-        cost_means = kwargs.get("cost_means", None)
-        reward_scale = kwargs.get("reward_scale", 1)
-        cost_scale = kwargs.get("cost_scale", 1)
-        World.__init__(self, name=name, seed=seed)
+        MultiArmedBandits.__init__(self, name=name, seed=seed, **kwargs)
 
-        self.M = M
-        self.use_cost = use_cost
-        self.reward_functions = None
-        self.cost_functions = None
-        if reward_means is None:
-            self.reward_means = np.random.uniform(0, reward_scale, self.M)
-        else:
-            self.reward_means = reward_means
-        if self.use_cost:
-            if cost_means is None:
-                self.cost_means = np.random.uniform(0, cost_scale, self.M)
-            else:
-                self.cost_means = cost_means
-
-    def get_env_config(self):
-        return {"M": self.M, "oracle": self.reward_means}
-
-    def provide_context(self, t):
-        pass
-
-    def assign_reward(self, action):
-        self.reward_functions = np.random.binomial(1, self.reward_means)
-        reward = self.reward_functions[action]
-        if self.use_cost:
-            cost = np.random.multivariate_normal(self.cost_means, np.eye(self.M))
-            cost = self.reward_functions[action]
-            return [reward, cost]
-        else:
-            return reward
-
-    def init_metrics(self):
-        if self.use_cost:
-            return {"reward": [0], "regret": [0], "cost": [0]}
-        else:
-            return {"reward": [0], "regret": [0]}
-
-    def update_metrics(self, metrics, reward, agent):
-        metrics["reward"].append(metrics["reward"][-1] + reward)
-        metrics["regret"].append(agent.regret[-1])
-        return metrics
+    def _assign_feedbacks(self, action):
+        self.reward_functions = [np.random.binomial(1, self.reward_means[:,i]) for i in range(self.reward_dimension)] 
+        rewards = [r[action] for r in self.reward_functions]
+        self.cost_functions = [np.random.multivariate_normal(self.cost_means[:,i], np.diag(self.cost_stds[:,i])) for i in range(self.cost_dimension)] 
+        costs = [c[action] for c in self.cost_functions]
+        return {"rewards" : rewards, "costs": costs}
 
 
 class ContextualCombinatorialBandits(World):
@@ -100,10 +120,9 @@ class ContextualCombinatorialBandits(World):
         C = kwargs.get("C", 15)
         reward_means = kwargs.get("reward_means", None)
         cost_means = kwargs.get("cost_means", None)
-        use_cost = kwargs.get("use_cost", False)
         combinatorial_cost = kwargs.get("combinatorial_cost", False)
         reward_scale = kwargs.get("reward_scale", 1)
-        cost_scale = kwargs.get("cost_scale", 1)
+        cost_scale = kwargs.get("cost_scale", 0)
         World.__init__(self, name=name, seed=seed)
 
         self.K = K  # number of possible intervention action dimensions, e.g. 4
@@ -122,32 +141,26 @@ class ContextualCombinatorialBandits(World):
         else:
             self.reward_means = reward_means
 
-        self.use_cost = use_cost
-        if self.use_cost:
-            self.combinatorial_cost = combinatorial_cost
-            if self.combinatorial_cost:
-                self.cost_dimension = self.num_comb_actions
-            else:
-                self.cost_dimension = self.num_action_values
-            self.cost_functions = None
-            if cost_means is None:
-                self.cost_means = np.random.uniform(0, cost_scale, self.cost_dimension)
-            else:
-                self.cost_means = cost_means
+        self.combinatorial_cost = combinatorial_cost
+        if self.combinatorial_cost:
+            self.cost_dimension = self.num_comb_actions
+        else:
+            self.cost_dimension = self.num_action_values
+        self.cost_functions = None
+        if cost_means is None:
+            self.cost_means = np.random.uniform(0, cost_scale, self.cost_dimension)
+        else:
+            self.cost_means = cost_means
 
     def get_env_config(self):
         return {"K": self.K, "N": self.N, "C": self.C, "oracle": self.reward_means}
 
-    def init_metrics(self):
-        if self.use_cost:
-            return {"reward": [0], "cost": [0]}
-        else:
-            return {"reward": [0]}
+    def _init_metrics(self):
+        return {"reward": [0], "cost": [0]}
 
-    def update_metrics(self, metrics, reward, agent):
-        metrics["reward"].append(metrics["reward"][-1] + reward[0])
-        if self.use_cost:
-            metrics["cost"].append(metrics["cost"][-1] + reward[1])
+    def _update_metrics(self, metrics, feedbacks, agent):
+        metrics["reward"].append(metrics["reward"][-1] + np.mean(feedbacks["rewards"]))
+        metrics["cost"].append(metrics["cost"][-1] + np.mean(feedbacks["costs"]))
         return metrics
 
     def _fill_comb_index(self, N, count):

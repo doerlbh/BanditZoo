@@ -128,6 +128,7 @@ class Game(object):
         agg_metrics = defaultdict(lambda: [])
         for k in self.world_names:
             metrics_keys = list(self.world_pools[k][0].metrics[0].keys())
+            print(metrics_keys)
             time_length = len(self.world_pools[k][0].metrics[0][metrics_keys[0]])
             for i in range(self.N):
                 for a in self.agent_names:
@@ -141,7 +142,7 @@ class Game(object):
                                 agg_metrics[m_key].append(m_val[t])
         return pd.DataFrame(agg_metrics)
 
-    def aggregate_world_metrics(self):
+    def _aggregate_world_metrics(self):
         """Aggregate the metrics in the M dimension (the agent instances)."""
         agg_metrics = {}
         for k in self.world_names:
@@ -167,9 +168,9 @@ class Game(object):
                         ) / np.sqrt(self.M)
         return agg_metrics
 
-    def aggregate_agent_metrics(self):
+    def _aggregate_agent_metrics(self):
         """Aggregate the metrics in both M and N dimensions (world and agent instances)."""
-        world_agg_metrics = self.aggregate_world_metrics()
+        world_agg_metrics = self._aggregate_world_metrics()
         agg_metrics = {}
         for k in self.world_names:
             agg_metrics[k] = defaultdict(lambda: {})
@@ -250,9 +251,9 @@ class Game(object):
         if form == "tabular":
             return self.get_tabular_metrics()
         elif form == "agent":
-            return self.aggregate_agent_metrics()
+            return self._aggregate_agent_metrics()
         elif form == "world":
-            return self.aggregate_world_metrics()
+            return self._aggregate_world_metrics()
         else:
             raise ValueError(
                 "Please select a supported format ('tabular', 'agent', 'world')."

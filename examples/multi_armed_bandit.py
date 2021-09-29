@@ -16,8 +16,7 @@ def plot_results(metrics):
         )
         sns_plot.savefig("mab_" + m + "_test.png")
 
-
-def mab():
+def main():
     g = games.Game(N=3, M=10)
     g.add_world_class(worlds.BernoulliMultiArmedBandits, M=5, name="MAB5")
     g.add_world_class(worlds.BernoulliMultiArmedBandits, M=3, name="MAB3")
@@ -31,10 +30,13 @@ def mab():
     metrics = g.get_metrics(form="tabular")
     plot_results(metrics)
 
-
-def main():
-    mab()
-
-
+def test():
+    g = games.Game(N=2, M=2)
+    g.add_world_class(worlds.BernoulliMultiArmedBandits, M=5, name="MAB5")
+    g.add_agent_class(agents.EGreedy, epsilon=0.05, name="Epsilon Greedy (e=0.05)")
+    g.add_agent_class(agents.Random, name="Random")
+    g.run_experiments(T=2, progress=True)
+    metrics = g.get_metrics(form="tabular")
+    
 if __name__ == "__main__":
     main()
