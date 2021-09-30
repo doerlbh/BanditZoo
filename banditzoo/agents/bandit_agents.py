@@ -40,17 +40,17 @@ class MultiArmedAgent(Agent):
         self.build(**kwargs)
 
     def build(self, **kwargs):
-        M = kwargs.get("M", None)
+        n_arms = kwargs.get("n_arms", None)
         oracle = kwargs.get("oracle", None)
 
-        self.M = M  # number of possible action arms, e.g. 5
-        if self.M is not None:
-            self.H = [0] * self.M  # the historical time certain arm is pulled
-            self.Q = [0] * self.M  # the estimated action Q value
+        self.n_arms = n_arms  # number of possible action arms, e.g. 5
+        if self.n_arms is not None:
+            self.H = [0] * self.n_arms  # the historical time certain arm is pulled
+            self.Q = [0] * self.n_arms  # the estimated action Q value
             if oracle is not None:
                 self.oracle = oracle  # the reward function, only to compute regret
             else:
-                self.oracle = [0] * self.M
+                self.oracle = [0] * self.n_arms
 
     def _update_metrics(self, feedbacks):
         reward = self.combine_feedbacks(feedbacks)
@@ -81,9 +81,9 @@ class ContextualAgent(Agent):
         self.build(**kwargs)
 
     def build(self, **kwargs):
-        C = kwargs.get("C", None)
+        context_dimension = kwargs.get("context_dimension", None)
 
-        self.C = C  # dimension of the context, e.g. 100
+        self.context_dimension = context_dimension  # dimension of the context, e.g. 100
 
     def _update_metrics(self, feedbacks):
         feedbacks = self.combine_feedbacks(feedbacks)
@@ -112,11 +112,15 @@ class CombinatorialAgent(Agent):
         self.build(**kwargs)
 
     def build(self, **kwargs):
-        K = kwargs.get("K", None)
-        N = kwargs.get("N", None)
+        action_dimension = kwargs.get("action_dimension", None)
+        action_options = kwargs.get("action_options", None)
 
-        self.K = K  # number of possible action dimensions, e.g. 4
-        self.N = N  # number of possible values in each action, e.g. [4,4,5,3]
+        self.action_dimension = (
+            action_dimension  # number of possible action dimensions, e.g. 4
+        )
+        self.action_options = (
+            action_options  # number of possible values in each action, e.g. [4,4,5,3]
+        )
 
 
 class ContextualCombinatorialAgent(CombinatorialAgent, ContextualAgent):
@@ -135,11 +139,13 @@ class ContextualCombinatorialAgent(CombinatorialAgent, ContextualAgent):
         self.build(**kwargs)
 
     def build(self, **kwargs):
-        K = kwargs.get("K", None)
-        N = kwargs.get("N", None)
-        C = kwargs.get("C", None)
-        CombinatorialAgent.build(self, K=K, N=N)
-        ContextualAgent.build(self, C=C)
+        action_dimension = kwargs.get("action_dimension", None)
+        action_options = kwargs.get("action_options", None)
+        context_dimension = kwargs.get("context_dimension", None)
+        CombinatorialAgent.build(
+            self, action_dimension=action_dimension, action_options=action_options
+        )
+        ContextualAgent.build(self, context_dimension=context_dimension)
 
     def _update_metrics(self, feedbacks):
         feedbacks = self.combine_feedbacks(feedbacks)
@@ -164,7 +170,7 @@ class Random(MultiArmedAgent):
         MultiArmedAgent.build(self, **kwargs)
 
     def act(self):
-        self.i_t = np.random.choice(self.M)
+        self.i_t = np.random.choice(self.n_arms)
         return self.i_t
 
     def _update_agent(self, feedbacks=None):
@@ -190,16 +196,16 @@ class TS(MultiArmedAgent):
         self.build(**kwargs)
 
     def build(self, **kwargs):
-        M = kwargs.get("M", None)
+        n_arms = kwargs.get("n_arms", None)
         MultiArmedAgent.build(self, **kwargs)
 
-        if self.M is not None:
-            self.S = [1] * self.M  # success
-            self.F = [1] * self.M  # failure
+        if self.n_arms is not None:
+            self.S = [1] * self.n_arms  # success
+            self.F = [1] * self.n_arms  # failure
 
     def act(self):
         theta = []
-        for i in range(self.M):
+        for i in range(self.n_arms):
             theta.append(np.random.beta(self.S[i], self.F[i]))
         self.i_t = np.argmax(theta)
         return self.i_t
@@ -257,7 +263,7 @@ class EGreedy(OGreedy):
 
     def act(self):
         if np.random.uniform() < self.epsilon:
-            self.i_t = np.random.choice(self.M)
+            self.i_t = np.random.choice(self.n_arms)
         else:
             self.i_t = np.argmax(self.Q)
         return self.i_t
@@ -284,7 +290,7 @@ class UCB1(OGreedy):
         self.build(**kwargs)
 
     def act(self):
-        if self.t_t < self.M:
+        if self.t_t < self.n_arms:
             self.i_t = self.t_t
         else:
             self.i_t = np.argmax(
@@ -300,7 +306,7 @@ class CTS(ContextualAgent):
     """
     Contextual Thompson Sampling algorithm.
 
-    Reference: Agrawal, S., & Goyal, N. (2013, May). Thompson sampling for contextual bandits
+    Reference: Agrawal, S., & Goyal, action_options. (2013, May). Thompson sampling for contextual bandits
     with linear payoffs. In International Conference on Machine Learning (pp. 127-135). PMLR.
     """
 
@@ -319,18 +325,18 @@ class CTS(ContextualAgent):
         self.build(**kwargs)
 
     def build(self, **kwargs):
-        M = kwargs.get("M", None)
+        n_arms = kwargs.get("n_arms", None)
         ContextualAgent.build(self, **kwargs)
 
-        self.M = M
-        if self.M is not None and self.C is not None:
-            self.B_i = self.M * [np.eye(self.C)]
-            self.z_i = self.M * [np.zeros((self.C))]
-            self.theta_i = self.M * [np.zeros((self.C))]
+        self.n_arms = n_arms
+        if self.n_arms is not None and self.context_dimension is not None:
+            self.B_i = self.n_arms * [np.eye(self.context_dimension)]
+            self.z_i = self.n_arms * [np.zeros((self.context_dimension))]
+            self.theta_i = self.n_arms * [np.zeros((self.context_dimension))]
 
     def act(self):
-        sample_theta = self.M * [0]
-        for i in range(self.M):
+        sample_theta = self.n_arms * [0]
+        for i in range(self.n_arms):
             sample_theta[i] = np.random.multivariate_normal(
                 self.theta_i[i],
                 self.alpha ** 2 * np.linalg.pinv(self.B_i[i]),
@@ -371,17 +377,17 @@ class LinUCB(ContextualAgent):
         self.build(**kwargs)
 
     def build(self, **kwargs):
-        M = kwargs.get("M", None)
+        n_arms = kwargs.get("n_arms", None)
         ContextualAgent.build(self, **kwargs)
 
-        self.M = M
-        if self.M is not None and self.C is not None:
-            self.A_i = self.M * [np.eye(self.C)]
-            self.b_i = self.M * [np.zeros((self.C))]
+        self.n_arms = n_arms
+        if self.n_arms is not None and self.context_dimension is not None:
+            self.A_i = self.n_arms * [np.eye(self.context_dimension)]
+            self.b_i = self.n_arms * [np.zeros((self.context_dimension))]
 
     def act(self):
-        p_t = self.M * [0]
-        for i in range(self.M):
+        p_t = self.n_arms * [0]
+        for i in range(self.n_arms):
             theta_i = np.linalg.pinv(self.A_i[i]) @ self.b_i[i]
             p_t[i] = theta_i.T @ self.c_t + self.alpha * np.sqrt(
                 self.c_t.T @ np.linalg.pinv(self.A_i[i]) @ self.c_t
@@ -407,7 +413,7 @@ class CCTS(ContextualCombinatorialAgent):
     Combinatorial Bandit with Budget. arXiv preprint arXiv:2106.15808.
 
     usage:
-    bandit = CCTS(K=5, N=[4,3,3,4,5], C=100, alpha=0.5, nabla=0.5, name='CCTS', seed=0)
+    bandit = CCTS(action_dimension=5, action_options=[4,3,3,4,5], context_dimension=100, alpha=0.5, nabla=0.5, name='CCTS', seed=0)
     bandit.observe(context)
     actions = bandit.act()
     bandit.update(feedbacks)
@@ -430,15 +436,21 @@ class CCTS(ContextualCombinatorialAgent):
     def build(self, **kwargs):
         ContextualCombinatorialAgent.build(self, **kwargs)
 
-        if self.N is not None:
-            self.B_i_k = [n * [np.eye(self.C)] for n in self.N]
-            self.z_i_k = [n * [np.zeros((self.C))] for n in self.N]
-            self.theta_i_k = [n * [np.zeros((self.C))] for n in self.N]
+        if self.action_options is not None:
+            self.B_i_k = [
+                n * [np.eye(self.context_dimension)] for n in self.action_options
+            ]
+            self.z_i_k = [
+                n * [np.zeros((self.context_dimension))] for n in self.action_options
+            ]
+            self.theta_i_k = [
+                n * [np.zeros((self.context_dimension))] for n in self.action_options
+            ]
 
     def act(self):
-        sample_theta = [n * [0] for n in self.N]
+        sample_theta = [n * [0] for n in self.action_options]
         i_t = {}
-        for k in range(self.K):
+        for k in range(self.action_dimension):
 
             for i in range(len(sample_theta[k])):
                 sample_theta[k][i] = np.random.multivariate_normal(
@@ -453,7 +465,7 @@ class CCTS(ContextualCombinatorialAgent):
 
     def _update_agent(self, feedbacks):
         feedbacks = self.combine_feedbacks(feedbacks)
-        for k in range(self.K):
+        for k in range(self.action_dimension):
             i = self.i_t[k]
             self.B_i_k[k][i] = self.nabla * self.B_i_k[k][i] + self.c_t @ self.c_t.T
             self.z_i_k[k][i] += self.c_t * feedbacks
@@ -468,7 +480,7 @@ class CCTSB(CCTS):
     Combinatorial Bandit with Budget. arXiv preprint arXiv:2106.15808.
 
     usage:
-    bandit = CCTSB(K=5, N=[4,3,3,4,5], C=100, alpha=0.5, nabla=0.5, obj_func=obj_func,
+    bandit = CCTSB(action_dimension=5, action_options=[4,3,3,4,5], context_dimension=100, alpha=0.5, nabla=0.5, obj_func=obj_func,
         obj_params=obj_params name='CCTSB', seed=0)
     bandit.observe(context)
     actions = bandit.act()
@@ -485,7 +497,15 @@ class CCTSB(CCTS):
         nabla = kwargs.get("nabla", 1.0)
         obj_func = kwargs.get("obj_func", default_obj)
         obj_params = kwargs.get("obj_params", {})
-        CCTS.__init__(self, name=name, seed=seed, alpha=alpha, nabla=nabla, obj_func=obj_func, obj_params=obj_params)
+        CCTS.__init__(
+            self,
+            name=name,
+            seed=seed,
+            alpha=alpha,
+            nabla=nabla,
+            obj_func=obj_func,
+            obj_params=obj_params,
+        )
 
         self.build(**kwargs)
 
@@ -501,7 +521,7 @@ class CCMAB(ContextualCombinatorialAgent):
     Combinatorial Bandit with Budget. arXiv preprint arXiv:2106.15808.
 
     usage:
-    bandit = CCMAB(K=5, N=[4,3,3,4,5], C=100, agent_base=UCB1, name='CCMAB-UCB1', seed=0)
+    bandit = CCMAB(action_dimension=5, action_options=[4,3,3,4,5], context_dimension=100, agent_base=UCB1, name='CCMAB-UCB1', seed=0)
     bandit.observe(context)
     actions = bandit.act()
     bandit.update(feedbacks)
@@ -522,23 +542,26 @@ class CCMAB(ContextualCombinatorialAgent):
     def build(self, **kwargs):
         ContextualCombinatorialAgent.build(self, **kwargs)
 
-        if self.N is not None:
-            self.agents = [self.agent_base(M=n, C=self.C) for n in self.N]
+        if self.action_options is not None:
+            self.agents = [
+                self.agent_base(n_arms=n, context_dimension=self.context_dimension)
+                for n in self.action_options
+            ]
 
     def observe(self, c):
         self.c_t = c  # update context
-        for k in range(self.K):
+        for k in range(self.action_dimension):
             self.agents[k].observe(self.c_t)
 
     def act(self):
         i_t = {}
-        for k in range(self.K):
+        for k in range(self.action_dimension):
             i_t[k] = self.agents[k].act()
         self.i_t = i_t
         return self.i_t
 
     def _update_agent(self, feedbacks):
-        for k in range(self.K):
+        for k in range(self.action_dimension):
             self.agents[k].update(feedbacks)
 
 
@@ -551,7 +574,7 @@ class CCMABB(CCMAB):
     Combinatorial Bandit with Budget. arXiv preprint arXiv:2106.15808.
 
     usage:
-    bandit = CCMABB(K=5, N=[4,3,3,4,5], C=100, agent_base=UCB1, obj_func=obj_func,
+    bandit = CCMABB(action_dimension=5, action_options=[4,3,3,4,5], context_dimension=100, agent_base=UCB1, obj_func=obj_func,
         obj_params=obj_params, name='CCMABB-UCB1', seed=0)
     bandit.observe(context)
     actions = bandit.act()
@@ -567,7 +590,14 @@ class CCMABB(CCMAB):
         agent_base = kwargs.get("agent_base", UCB1)
         obj_func = kwargs.get("obj_func", default_obj)
         obj_params = kwargs.get("obj_params", {})
-        CCMAB.__init__(self, agent_base=agent_base, obj_func=obj_func, obj_params=obj_params, name=name, seed=seed)
+        CCMAB.__init__(
+            self,
+            agent_base=agent_base,
+            obj_func=obj_func,
+            obj_params=obj_params,
+            name=name,
+            seed=seed,
+        )
 
         self.build(**kwargs)
 
@@ -590,8 +620,8 @@ class CombRandom(ContextualCombinatorialAgent):
 
     def act(self):
         i_t = {}
-        for k in range(self.K):
-            i_t[k] = np.random.choice(self.N[k])
+        for k in range(self.action_dimension):
+            i_t[k] = np.random.choice(self.action_options[k])
         self.i_t = i_t
         return self.i_t
 
@@ -615,8 +645,8 @@ class CombRandomFixed(ContextualCombinatorialAgent):
     def act(self):
         if self.i_t is None:
             i_t = {}
-            for k in range(self.K):
-                i_t[k] = np.random.choice(self.N[k])
+            for k in range(self.action_dimension):
+                i_t[k] = np.random.choice(self.action_options[k])
             self.i_t = i_t
         return self.i_t
 

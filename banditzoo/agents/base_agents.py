@@ -147,7 +147,8 @@ class MultiObjectiveAgent(object):
 
     def combine_feedbacks(self, feedbacks: Dict[str, Any]) -> float:
         return self.obj_func(feedbacks, self.obj_params)
-    
+
+
 class Agent(IOAgent, OnlineAgent, OfflineAgent, MultiObjectiveAgent):
     """
     Base reinforcement learning agent class
@@ -161,7 +162,7 @@ class Agent(IOAgent, OnlineAgent, OfflineAgent, MultiObjectiveAgent):
         obj_params: Dict[str, Any] = {},
         name: Optional[str] = None,
         fpath: Optional[str] = None,
-        **kwargs: Optional[Dict[str, Any]]
+        **kwargs: Optional[Dict[str, Any]],
     ):
         IOAgent.__init__(self, load=load, fpath=fpath)
         OnlineAgent.__init__(self)

@@ -18,10 +18,10 @@
 Base classes of Games, i.e. experiments to run agents in worlds.
 
 usage:
-g = Game(N=5,M=10)
+g = Game(n_world_instances=5,n_agent_instances=10)
 ...
-g.add_world_class(worlds.BernoulliMultiArmedBandits, M=3)
-g.add_agent_class(agents.TS, M=3)
+g.add_world_class(worlds.BernoulliMultiArmedBandits, n_agent_instances=3)
+g.add_agent_class(agents.TS, n_agent_instances=3)
 g.run_experiments(T=1000)
 ...
 results = g.get_metrics()
@@ -37,22 +37,24 @@ class Game(object):
     Base class of Game object
     """
 
-    def __init__(self, name=None, seed=0, N=None, M=None):
+    def __init__(
+        self, name=None, seed=0, n_world_instances=None, n_agent_instances=None
+    ):
         """Generate a Game object.
 
         Args:
             name (str, optional): [name of the game]. Defaults to None.
             seed (int, optional): [random seed]. Defaults to 0.
-            N (int, optional): [number of world instances per world class]. Defaults to None.
-            M (int, optional): [number of agent instances per agent class]. Defaults to None.
+            n_world_instances (int, optional): [number of world instances per world class]. Defaults to None.
+            n_agent_instances (int, optional): [number of agent instances per agent class]. Defaults to None.
         """
 
         self.name = name
         self.seed = seed
         np.random.seed(seed)
 
-        self.N = N
-        self.M = M
+        self.n_world_instances = n_world_instances
+        self.n_agent_instances = n_agent_instances
 
         self.world_names = []
         self.agent_names = []
@@ -87,7 +89,7 @@ class Game(object):
         self.agent_pools[world_name] = {}
         self.history_pools[world_name] = {}
         self.metrics_pools[world_name] = {}
-        for i in range(self.N):
+        for i in range(self.n_world_instances):
             world_instances.append(world_class(**kwargs, seed=i))
             self.agent_pools[world_name][i] = {}
             self.history_pools[world_name][i] = {}
@@ -114,10 +116,10 @@ class Game(object):
         agent_name = kwargs.get("name", agent_class(**kwargs).name)
         self.agent_names.append(agent_name)
         agent_instances = []
-        for i in range(self.M):
+        for i in range(self.n_agent_instances):
             agent_instances.append(agent_class(**kwargs, seed=i))
         for k in self.world_names:
-            for i in range(self.N):
+            for i in range(self.n_world_instances):
                 self.agent_pools[k][i][agent_name] = agent_instances
                 self.history_pools[k][i][agent_name] = []
                 self.metrics_pools[k][i][agent_name] = []
@@ -130,7 +132,7 @@ class Game(object):
             metrics_keys = list(self.world_pools[k][0].metrics[0].keys())
             print(metrics_keys)
             time_length = len(self.world_pools[k][0].metrics[0][metrics_keys[0]])
-            for i in range(self.N):
+            for i in range(self.n_world_instances):
                 for a in self.agent_names:
                     metrics = self.metrics_pools[k][i][a]
                     for m in metrics:
@@ -143,12 +145,12 @@ class Game(object):
         return pd.DataFrame(agg_metrics)
 
     def _aggregate_world_metrics(self):
-        """Aggregate the metrics in the M dimension (the agent instances)."""
+        """Aggregate the metrics in the n_agent_instances dimension (the agent instances)."""
         agg_metrics = {}
         for k in self.world_names:
             agg_metrics[k] = {}
             metrics_keys = list(self.world_pools[k][0].metrics[0].keys())
-            for i in range(self.N):
+            for i in range(self.n_world_instances):
                 agg_metrics[k][i] = {}
                 for a in self.agent_names:
                     metrics = self.metrics_pools[k][i][a]
@@ -165,17 +167,17 @@ class Game(object):
                         )
                         agg_metrics[k][i][a][mk + "_sem"] = np.std(
                             agg_metrics[k][i][a][mk], axis=0, ddof=1
-                        ) / np.sqrt(self.M)
+                        ) / np.sqrt(self.n_agent_instances)
         return agg_metrics
 
     def _aggregate_agent_metrics(self):
-        """Aggregate the metrics in both M and N dimensions (world and agent instances)."""
+        """Aggregate the metrics in both n_agent_instances and n_world_instances dimensions (world and agent instances)."""
         world_agg_metrics = self._aggregate_world_metrics()
         agg_metrics = {}
         for k in self.world_names:
             agg_metrics[k] = defaultdict(lambda: {})
             metrics_keys = list(self.world_pools[k][0].metrics[0].keys())
-            for i in range(self.N):
+            for i in range(self.n_world_instances):
                 for a in self.agent_names:
                     agg_metrics[k][a] = defaultdict(lambda: [])
                     agg_metrics[k][a]["name"] = a
@@ -192,7 +194,7 @@ class Game(object):
                     )
                     agg_metrics[k][a][mk + "_sem"] = np.std(
                         agg_metrics[k][a][mk], axis=0, ddof=1
-                    ) / np.sqrt(self.M * self.N)
+                    ) / np.sqrt(self.n_agent_instances * self.n_world_instances)
         return agg_metrics
 
     def run_experiments(self, T, progress=False):
@@ -207,7 +209,12 @@ class Game(object):
                 if progress:
                     print("==============================================")
                     print(
-                        "Now running the world " + k + " " + str(i) + "/" + str(self.N)
+                        "Now running the world "
+                        + k
+                        + " "
+                        + str(i)
+                        + "/"
+                        + str(self.n_world_instances)
                     )
                 for a in self.agent_names:
                     w.add_agent_pool(self.agent_pools[k][i][a])
@@ -238,8 +245,8 @@ class Game(object):
         Args:
             group_by (str, optional): [output format of the metrics].
                 If 'tabular', the metrics are stored in a pandas dataframe.
-                If 'agent', the metrics are aggregated by both N and M dimension.
-                If 'world', the metrics are aggregated only in the M dimension (the
+                If 'agent', the metrics are aggregated by both n_world_instances and n_agent_instances dimension.
+                If 'world', the metrics are aggregated only in the n_agent_instances dimension (the
                 agent instances) and not the world instances. Defaults to 'tabular'.
 
         Returns:

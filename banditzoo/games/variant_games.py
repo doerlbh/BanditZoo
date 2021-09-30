@@ -34,16 +34,24 @@ class MultiObjectiveGame(Game):
     Class of Multi-Objective Game object
     """
 
-    def __init__(self, name=None, seed=0, N=None, M=None):
+    def __init__(
+        self, name=None, seed=0, n_world_instances=None, n_agent_instances=None
+    ):
         """Generate a Game object.
 
         Args:
             name (str, optional): [name of the game]. Defaults to None.
             seed (int, optional): [random seed]. Defaults to 0.
-            N (int, optional): [number of world instances per world class]. Defaults to None.
-            M (int, optional): [number of agent instances per agent class]. Defaults to None.
+            n_world_instances (int, optional): [number of world instances per world class]. Defaults to None.
+            n_agent_instances (int, optional): [number of agent instances per agent class]. Defaults to None.
         """
-        Game.__init__(self, name=name, seed=seed, N=N, M=M)
+        Game.__init__(
+            self,
+            name=name,
+            seed=seed,
+            n_world_instances=n_world_instances,
+            n_agent_instances=n_agent_instances,
+        )
 
         self.games = {}
         self.params_search = None
@@ -89,7 +97,7 @@ class MultiObjectiveGame(Game):
             )
 
         for k in self.world_names:
-            for i in range(self.N):
+            for i in range(self.n_world_instances):
                 for a_name in self.agent_names:
                     for a in self.agent_pools[k][i][a_name]:
                         for params_name, params_val in kwargs.items():
@@ -109,7 +117,7 @@ class MultiObjectiveGame(Game):
             return Game.get_tabular_metrics(self)
 
     def _aggregate_world_metrics(self):
-        """Aggregate the metrics in the M dimension (the agent instances)."""
+        """Aggregate the metrics in the n_agent_instances dimension (the agent instances)."""
         if self.params_lock:
             return {
                 g_params: g._aggregate_world_metrics()
@@ -119,7 +127,7 @@ class MultiObjectiveGame(Game):
             return Game._aggregate_world_metrics(self)
 
     def _aggregate_agent_metrics(self):
-        """Aggregate the metrics in both M and N dimensions (world and agent instances)."""
+        """Aggregate the metrics in both n_agent_instances and n_world_instances dimensions (world and agent instances)."""
         if self.params_lock:
             return {
                 g_params: g._aggregate_agent_metrics()
@@ -169,8 +177,8 @@ class MultiObjectiveGame(Game):
         Args:
             group_by (str, optional): [output format of the metrics].
                 If 'tabular', the metrics are stored in a pandas dataframe.
-                If 'agent', the metrics are aggregated by both N and M dimension.
-                If 'world', the metrics are aggregated only in the M dimension (the
+                If 'agent', the metrics are aggregated by both n_world_instances and n_agent_instances dimension.
+                If 'world', the metrics are aggregated only in the n_agent_instances dimension (the
                 agent instances) and not the world instances. Defaults to 'tabular'.
 
         Returns:
@@ -188,12 +196,12 @@ class MultiObjectiveGame(Game):
         else:
             return Game.get_metrics(self, form=form)
 
-    def get_pareto_metrics(self, quantile_bin=False, nbins=20):
+    def get_pareto_metrics(self, quantile_bin=False, n_bins=20):
         """Output the metrics of the agents in the worlds.
 
         Args:
             quantile_bin (bool, optional): [whether to use quantile in quantization]
-            nbins (int, optional): [number of bins in the quantization].
+            n_bins (int, optional): [number of bins in the quantization].
 
         Returns:
             [pd.DataFrame]: [the aggregated metrics of the agents in different objective params].
@@ -213,5 +221,5 @@ class MultiObjectiveGame(Game):
                 m_df[p_key] = [p_val] * m_df.shape[0]
             m_dfs.append(m_df)
         return quantize_metrics(
-            pd.concat(m_dfs, ignore_index=True), quantile_bin, nbins
+            pd.concat(m_dfs, ignore_index=True), quantile_bin, n_bins
         )

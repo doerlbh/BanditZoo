@@ -44,14 +44,14 @@ class TestAllAgents(TestCase):
 )
 class TestMultiArmedAgents(TestCase):
     def test_the_agent_can_initialize(self):
-        a = self.agent(M=5)
+        a = self.agent(n_arms=5)
 
     def test_the_agent_can_act(self):
-        a = self.agent(M=5)
+        a = self.agent(n_arms=5)
         action = a.act()
 
     def test_the_agent_can_update(self):
-        a = self.agent(M=5)
+        a = self.agent(n_arms=5)
         action = a.act()
         feedbacks = {"rewards": 1}
         a.update(feedbacks)
@@ -65,16 +65,16 @@ class TestMultiArmedAgents(TestCase):
 )
 class TestContextualAgents(TestCase):
     def test_the_agent_can_initialize(self):
-        a = self.agent(M=3, C=10)
+        a = self.agent(n_arms=3, context_dimension=10)
 
     def test_the_agent_can_act(self):
-        a = self.agent(M=3, C=10)
+        a = self.agent(n_arms=3, context_dimension=10)
         context = np.arange(10)
         a.observe(context)
         action = a.act()
 
     def test_the_agent_can_update(self):
-        a = self.agent(M=3, C=10)
+        a = self.agent(n_arms=3, context_dimension=10)
         context = np.arange(10)
         a.observe(context)
         action = a.act()
@@ -94,16 +94,16 @@ class TestContextualAgents(TestCase):
 )
 class TestContextualCombinatorialAgents(TestCase):
     def test_the_agent_can_initialize(self):
-        a = self.agent(K=2, N=[3, 4], C=12)
+        a = self.agent(action_dimension=2, action_options=[3, 4], context_dimension=12)
 
     def test_the_agent_can_act(self):
-        a = self.agent(K=2, N=[3, 4], C=12)
+        a = self.agent(action_dimension=2, action_options=[3, 4], context_dimension=12)
         context = np.arange(12)
         a.observe(context)
         action = a.act()
 
     def test_the_agent_can_update(self):
-        a = self.agent(K=2, N=[3, 4], C=12)
+        a = self.agent(action_dimension=2, action_options=[3, 4], context_dimension=12)
         context = np.arange(12)
         a.observe(context)
         action = a.act()
@@ -113,16 +113,18 @@ class TestContextualCombinatorialAgents(TestCase):
 
 class TestUtils(TestCase):
     def test_the_default_obj_works(self):
-        rewards = {"rewards": [1],"costs": [2]}
+        rewards = {"rewards": [1], "costs": [2]}
         obj_params = {}
         r = agents.utils.default_obj(rewards, obj_params)
         expected_r = 1.5
         self.assertEqual(expected_r, expected_r)
 
     def test_the_default_obj_works(self):
-        rewards = {"rewards": [1],"costs": [2]}
+        rewards = {"rewards": [1], "costs": [2]}
         w = 0.5
         obj_params = {"w": w}
         r = agents.utils.budget_obj_v1(rewards, obj_params)
-        expected_r = w * np.mean(rewards["rewards"]) + (1 - w) / np.mean(rewards["costs"])
+        expected_r = w * np.mean(rewards["rewards"]) + (1 - w) / np.mean(
+            rewards["costs"]
+        )
         self.assertEqual(expected_r, expected_r)

@@ -55,8 +55,12 @@ def quantize_metrics(df, quantile_bin=False, nbins=20):
             df.loc[selected, "reward_bins"] = pd.cut(df[selected]["reward"], bins=nbins)
             df.loc[selected, "cost_bins"] = pd.cut(df[selected]["cost"], bins=nbins)
         else:
-            df.loc[selected, "reward_bins"] = pd.qcut(df[selected]["reward"], q=nbins, duplicates='drop')
-            df.loc[selected, "cost_bins"] = pd.qcut(df[selected]["cost"], q=nbins, duplicates='drop')
+            df.loc[selected, "reward_bins"] = pd.qcut(
+                df[selected]["reward"], q=nbins, duplicates="drop"
+            )
+            df.loc[selected, "cost_bins"] = pd.qcut(
+                df[selected]["cost"], q=nbins, duplicates="drop"
+            )
     df["reward_"] = df.groupby("reward_bins")["reward"].transform("mean")
     df["cost_"] = df.groupby("cost_bins")["cost"].transform("mean")
     return df
