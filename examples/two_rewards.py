@@ -68,7 +68,7 @@ def test():
     g.add_world_class(
         worlds.MultiArmedBandits,
         n_arms=3,
-        reward_stds=[[5] * 3, [1] * 3],
+        reward_stds=[[[5, 1]] * 3][0],
         reward_dimension=2,
         reward_reveal_frequency=[1, sparse_probability],
         name="MAB3",
