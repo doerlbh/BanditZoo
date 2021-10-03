@@ -35,7 +35,6 @@ def check_and_correct_dimensions(
     dimension: int,
     target_dimension: int,
 ):
-    # TODO add tests
     if not np.array_equal(means.shape, stds.shape):
         raise ValueError(
             "Please specify the same shape for "
@@ -43,7 +42,7 @@ def check_and_correct_dimensions(
             + " means and stds, now "
             + str(means.shape)
             + " and "
-            + +str(stds.shape)
+            + str(stds.shape)
         )
     if means.ndim == target_dimension - 1:
         means = np.expand_dims(means, -1)
@@ -54,11 +53,11 @@ def check_and_correct_dimensions(
             raise ValueError(
                 "Please specify the same shape for "
                 + name
-                + "dimension and the "
+                + " dimension and the "
                 + "dimensions of its mean, now "
                 + str(dimension)
                 + " and "
-                + +str(means.shape[-1])
+                + str(means.shape[-1])
             )
         dimension = means.shape[-1]
 

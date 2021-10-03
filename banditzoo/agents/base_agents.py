@@ -86,6 +86,7 @@ class OnlineAgent(object):
         self.t_t = 0  # current iteration
 
         self.reward = []  # keep track of rewards
+        self.regret = []  # keep track of regrets
 
     def observe(self, c: Optional[np.ndarray] = None):
         """[summary]

@@ -36,7 +36,6 @@ class MultiArmedAgent(Agent):
     ):
         Agent.__init__(self, name=name, seed=seed)
 
-        self.regret = []  # keep track of regrets
         self.build(**kwargs)
 
     def build(self, **kwargs):
@@ -88,12 +87,8 @@ class ContextualAgent(Agent):
     def _update_metrics(self, feedbacks):
         feedbacks = self.combine_feedbacks(feedbacks)
         self.t_t += 1
-        # self.Q[self.i_t] = (self.Q[self.i_t] * self.H[self.i_t] + feedbacks) / (
-        #     self.H[self.i_t] + 1
-        # )
-        # self.H[self.i_t] += 1
         self.reward.append(feedbacks)
-        # self.regret.append((np.max(self.oracle) * self.t_t - np.sum(self.reward)) / self.t_t )
+        self.regret.append(-1)  # placeholder
 
 
 class CombinatorialAgent(Agent):
@@ -151,6 +146,7 @@ class ContextualCombinatorialAgent(CombinatorialAgent, ContextualAgent):
         feedbacks = self.combine_feedbacks(feedbacks)
         self.t_t += 1
         self.reward.append(feedbacks)
+        self.regret.append(-1)  # placeholder
 
 
 class Random(MultiArmedAgent):

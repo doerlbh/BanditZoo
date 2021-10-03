@@ -8,7 +8,6 @@ from banditzoo import worlds, agents
 
 @parameterized_class(
     [
-        {"world": worlds.World},
         {"world": worlds.MultiArmedBandits},
         {"world": worlds.BernoulliMultiArmedBandits},
         {"world": worlds.ContextualCombinatorialBandits},
@@ -17,21 +16,121 @@ from banditzoo import worlds, agents
         {"world": worlds.EpidemicControl_v2},
     ]
 )
-class TestMultiArmedBanditWorlds(TestCase):
+class TestBanditWorlds(TestCase):
     def test_the_world_can_initialize(self):
         world = self.world
-        w = world()
+        w = world(n_arms=5)
 
     def test_the_world_can_add_agent(self):
         world = self.world
-        w = world()
-        a = agents.Random(n_arms=5)
+        w = world(n_arms=5)
+        a = agents.Random()
         w.add_agent(a)
+
+    def test_the_world_can_add_agent_with_specified_reward_reveal_frequency(self):
+        world = self.world
+        w = world(n_arms=5, reward_reveal_frequency=0.9)
+        a = agents.Random()
+        w.add_agent(a)
+
+    def test_the_world_can_add_agent_with_specified_cost_reveal_frequency(self):
+        world = self.world
+        w = world(n_arms=5, cost_reveal_frequency=0.9)
+        a = agents.Random()
+        w.add_agent(a)
+
+    def test_the_world_can_add_agent_with_multiple_reward_dimensions(self):
+        world = self.world
+        w = world(n_arms=5, reward_dimension=3)
+        a = agents.Random()
+        w.add_agent(a)
+
+    def test_the_world_can_add_agent_with_predefined_reward(self):
+        world = self.world
+        w = world(
+            n_arms=3, reward_means=[1, 2, 3], reward_stds=[0, 2, 1], reward_dimension=1
+        )
+        a = agents.Random(n_arms=3)
+        w.add_agent(a)
+
+    def test_the_world_can_add_agent_with_predefined_multi_dimensional_reward(self):
+        world = self.world
+        w = world(
+            n_arms=3,
+            reward_means=[[1, 2, 3], [2, 3, 1]],
+            reward_stds=[[0, 2, 1], [2, 1, 0]],
+            reward_dimension=1,
+        )
+        a = agents.Random(n_arms=3)
+        w.add_agent(a)
+
+    def test_the_world_can_add_agent_with_predefined_cost(self):
+        world = self.world
+        w = world(n_arms=3, cost_means=[1, 2, 3], cost_stds=[0, 2, 1])
+        a = agents.Random()
+        w.add_agent(a)
+
+    def test_the_world_can_add_agent_with_predefined_multi_dimensional_cost(self):
+        world = self.world
+        w = world(
+            n_arms=3,
+            cost_means=[[1, 2, 3], [2, 3, 1]],
+            cost_stds=[[0, 2, 1], [2, 1, 0]],
+        )
+        a = agents.Random()
+        w.add_agent(a)
+
+    def test_the_world_throws_error_if_predefined_reward_dimension_mismatches_1(self):
+        world = self.world
+        with self.assertRaises(Exception) as context:
+            w = world(
+                n_arms=3, reward_means=[1, 2, 3], reward_stds=[0, 2], reward_dimension=1
+            )
+        self.assertTrue(
+            "Please specify the same shape for reward means and stds, now (3,) and (2,)"
+            in str(context.exception)
+        )
+
+    def test_the_world_throws_error_if_predefined_reward_dimension_mismatches_2(self):
+        world = self.world
+        with self.assertRaises(Exception) as context:
+            w = world(
+                n_arms=3,
+                reward_means=[1, 2, 3],
+                reward_stds=[0, 2, 1],
+                reward_dimension=2,
+            )
+        self.assertTrue(
+            "Please specify the same shape for reward dimension and the dimensions of its mean, now 2 and 1"
+            in str(context.exception)
+        )
+
+    def test_the_world_throws_error_if_predefined_cost_dimension_mismatches_1(self):
+        world = self.world
+        with self.assertRaises(Exception) as context:
+            w = world(
+                n_arms=3, cost_means=[1, 2, 3], cost_stds=[0, 2], cost_dimension=1
+            )
+        self.assertTrue(
+            "Please specify the same shape for cost means and stds, now (3,) and (2,)"
+            in str(context.exception)
+        )
+
+    def test_the_world_throws_error_if_predefined_cost_dimension_mismatches_2(self):
+        world = self.world
+        with self.assertRaises(Exception) as context:
+            w = world(
+                n_arms=3, cost_means=[1, 2, 3], cost_stds=[0, 2, 1], cost_dimension=2
+            )
+        self.assertTrue(
+            "Please specify the same shape for cost dimension and the dimensions of its mean, now 2 and 1"
+            in str(context.exception)
+        )
 
     def test_the_world_can_add_agent_pools(self):
         world = self.world
-        w = world()
-        a = agents.Random(n_arms=5)
+        w = world(n_arms=5)
+        a = agents.Random()
         w.add_agent_pool([a, a])
 
     def test_the_world_can_add_agent_and_build_them(self):
@@ -43,19 +142,19 @@ class TestMultiArmedBanditWorlds(TestCase):
 
     def test_the_world_can_filter_agents(self):
         world = self.world
-        w = world()
-        a1 = agents.Random(n_arms=5, seed=0, name="Random")
-        a2 = agents.Random(n_arms=5, seed=1, name="Random")
-        a3 = agents.TS(n_arms=5, seed=0, name="TS")
+        w = world(n_arms=5)
+        a1 = agents.Random(seed=0, name="Random")
+        a2 = agents.Random(seed=1, name="Random")
+        a3 = agents.TS(seed=0, name="TS")
         w.add_agent_pool([a1, a2, a3])
         self.assertEqual(len(w.filter_agent("Random")), 2)
 
     def test_the_world_can_filter_agents_index(self):
         world = self.world
-        w = world()
-        a1 = agents.Random(n_arms=5, seed=0, name="Random")
-        a2 = agents.TS(n_arms=5, seed=0, name="TS")
-        a3 = agents.Random(n_arms=5, seed=1, name="Random")
+        w = world(n_arms=5)
+        a1 = agents.Random(seed=0, name="Random")
+        a2 = agents.TS(seed=0, name="TS")
+        a3 = agents.Random(seed=1, name="Random")
         w.add_agent_pool([a1, a2, a3])
         np.allclose(w.filter_agent("Random", get_index=True), [0, 2])
 

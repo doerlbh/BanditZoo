@@ -39,38 +39,25 @@ class EpidemicControl(ContextualCombinatorialBandits):
         seed=0,
         **kwargs,
     ):
-        action_dimension = kwargs.get("action_dimension", 5)
-        action_options = kwargs.get("action_options", [3, 3, 3, 3, 3])
-        context_dimension = kwargs.get("context_dimension", 15)
-        reward_means = kwargs.get("reward_means", None)
-        cost_means = kwargs.get("cost_means", None)
-        combinatorial_cost = kwargs.get("combinatorial_cost", False)
-        reward_scale = kwargs.get("reward_scale", 1)
         cost_scale = kwargs.get("cost_scale", 1)
         ContextualCombinatorialBandits.__init__(
             self,
-            action_dimension=action_dimension,
-            action_options=action_options,
-            context_dimension=context_dimension,
-            reward_means=reward_means,
-            cost_means=cost_means,
-            combinatorial_cost=combinatorial_cost,
-            reward_scale=reward_scale,
-            cost_scale=cost_scale,
             name=name,
             seed=seed,
+            cost_scale=cost_scale,
+            **kwargs,
         )
 
-        # If we let num_comb_actions = prod(action_options), i.e. all possible actions sets,
-        # if we let num_action_values = sum(action_options), i.e. all possible action values,
-        # by default, among the context context_dimension, the first num_action_values features
+        # If we let n_arms = prod(action_options), i.e. all possible actions sets,
+        # if we let n_arms_sum = sum(action_options), i.e. all possible action values,
+        # by default, among the context context_dimension, the first n_arms_sum features
         # are the cost values for each of all the possible actions. Or in the
         # case, where combinatorial cost are used, meaning all the action costs are
-        # interacting with one another, num_comb_actions determines the context dimension.
+        # interacting with one another, n_arms determines the context dimension.
 
         # For instance, if there are two action dimensions, school closure and traffic
         # control, thus action_dimension = 2, and they each have three levels, thus action_options = [2, 3], then
-        # num_comb_actions = prod(action_options) = 6, and the first 6 values of the context will be the
+        # n_arms = prod(action_options) = 6, and the first 6 values of the context will be the
         # costs of the 6 possible action values. E.g, if controlling traffic at levels 1, 2, 3
         # when school is open cost the government 12M, 20M and 24M, and controlling traffic at
         # at levels 1, 2, 3  when school is closed cost the government 22M, 30M and 50M.
@@ -80,23 +67,18 @@ class EpidemicControl(ContextualCombinatorialBandits):
 
     def _provide_contexts(self, t):
         context = np.random.random(self.context_dimension)
-        self.cost_functions = np.random.multivariate_normal(
-            self.cost_means, np.eye(self.cost_dimension)
-        )
-        context[: self.cost_dimension] = self.cost_functions
+        cost_parameters = np.array(self.cost_function.draw_function()).squeeze()
+        context[: len(cost_parameters)] = cost_parameters
         return context
 
     def _assign_feedbacks(self, action):
-        self.reward_functions = np.random.multivariate_normal(
-            self.reward_means, np.eye(self.num_comb_actions)
-        )
-        reward = self.reward_functions[self._get_action_comb_index(action)]
+        rewards = self.reward_function.get(self._get_action_comb_index(action))
         if self.combinatorial_cost:
-            cost = self.cost_functions[self._get_action_comb_index(action)]
+            costs = self.cost_function.get(self._get_action_comb_index(action))
         else:
-            cost = self.cost_functions @ self._get_action_one_hot(action)
-        rewards = [reward]
-        costs = [cost]
+            costs = self.cost_function.get(
+                self._get_action_one_hot(action), one_hot=True
+            )
         return {"rewards": rewards, "costs": costs}
 
 
@@ -131,25 +113,12 @@ class EpidemicControl_v2(EpidemicControl):
         seed=0,
         **kwargs,
     ):
-        action_dimension = kwargs.get("action_dimension", 5)
-        action_options = kwargs.get("action_options", [3, 3, 3, 3, 3])
-        context_dimension = kwargs.get("context_dimension", 15)
-        reward_means = kwargs.get("reward_means", None)
-        cost_means = kwargs.get("cost_means", None)
-        combinatorial_cost = kwargs.get("combinatorial_cost", False)
-        reward_scale = kwargs.get("reward_scale", 1)
         change_every = kwargs.get("change_every", 10)
         EpidemicControl.__init__(
             self,
-            action_dimension=action_dimension,
-            action_options=action_options,
-            context_dimension=context_dimension,
             name=name,
             seed=seed,
-            reward_means=reward_means,
-            cost_means=cost_means,
-            combinatorial_cost=combinatorial_cost,
-            reward_scale=reward_scale,
+            **kwargs,
         )
         self.change_every = change_every
 
@@ -157,8 +126,7 @@ class EpidemicControl_v2(EpidemicControl):
         context = np.random.random(self.context_dimension)
         if t // self.change_every == 0:
             np.random.shuffle(self.cost_means)
-        self.cost_functions = np.random.multivariate_normal(
-            self.cost_means, np.eye(self.cost_dimension)
-        )
-        context[: self.cost_dimension] = self.cost_functions
+            self._reset_cost_function()
+        cost_parameters = np.array(self.cost_function.draw_function()).squeeze()
+        context[: len(cost_parameters)] = cost_parameters
         return context
