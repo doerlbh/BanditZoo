@@ -54,14 +54,18 @@ class Feedback(object):
 
     def get(self, action, one_hot=False):
         reveal = self.reveal_function() * np.random.binomial(1, self.reveal_frequency)
-        if reveal:
-            self.feedback_function = self.draw_function()
-            if one_hot:
-                feedbacks = [action @ np.array(self.feedback_function).squeeze()]
-            else:
-                feedbacks = [r[action] for r in self.feedback_function]
+        self.feedback_function = self.draw_function()
+        if one_hot:
+            actual_feedbacks = [action @ np.array(self.feedback_function).squeeze()]
         else:
-            feedbacks = None
+            actual_feedbacks = [r[action] for r in self.feedback_function]
+        if reveal:
+            feedbacks = {
+                "revealed_feedback": actual_feedbacks,
+                "hidden_feedback": actual_feedbacks,
+            }
+        else:
+            feedbacks = {"revealed_feedback": None, "hidden_feedback": actual_feedbacks}
         return feedbacks
 
     @abstractmethod

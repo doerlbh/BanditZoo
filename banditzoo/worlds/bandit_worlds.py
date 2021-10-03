@@ -146,8 +146,8 @@ class MultiArmedBandits(World):
         pass
 
     def _assign_feedbacks(self, action):
-        rewards = self.reward_function.get(action)
-        costs = self.cost_function.get(action)
+        rewards = self.reward_function.get(action)["revealed_feedback"]
+        costs = self.cost_function.get(action)["revealed_feedback"]
         return {"rewards": rewards, "costs": costs}
 
     def _init_metrics(self):

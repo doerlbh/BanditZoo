@@ -72,13 +72,17 @@ class EpidemicControl(ContextualCombinatorialBandits):
         return context
 
     def _assign_feedbacks(self, action):
-        rewards = self.reward_function.get(self._get_action_comb_index(action))
+        rewards = self.reward_function.get(self._get_action_comb_index(action))[
+            "revealed_feedback"
+        ]
         if self.combinatorial_cost:
-            costs = self.cost_function.get(self._get_action_comb_index(action))
+            costs = self.cost_function.get(self._get_action_comb_index(action))[
+                "revealed_feedback"
+            ]
         else:
             costs = self.cost_function.get(
                 self._get_action_one_hot(action), one_hot=True
-            )
+            )["revealed_feedback"]
         return {"rewards": rewards, "costs": costs}
 
 
