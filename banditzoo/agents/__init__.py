@@ -9,6 +9,7 @@ from .bandit_agents import TS
 from .bandit_agents import OGreedy
 from .bandit_agents import EGreedy
 from .bandit_agents import UCB1
+from .bandit_agents import IUCB
 from .bandit_agents import CTS
 from .bandit_agents import LinUCB
 from .bandit_agents import CCTS

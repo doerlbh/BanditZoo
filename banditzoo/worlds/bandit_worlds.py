@@ -45,32 +45,36 @@ class MultiArmedBandits(World):
         self.reward_function_class = kwargs.get(
             "reward_function_class", GaussianFeedback
         )
-        self.reward_reveal_frequency = kwargs.get("reward_reveal_frequency", 1)
-        self.reward_reveal_function = kwargs.get("reward_reveal_function", lambda: 1)
         self.cost_means = kwargs.get("cost_means", None)
         self.cost_stds = kwargs.get("cost_stds", None)
         self.cost_scale = kwargs.get("cost_scale", 0)
         self.cost_dimension = kwargs.get("cost_dimension", 1)
         self.cost_function_class = kwargs.get("cost_function_class", GaussianFeedback)
-        self.cost_reveal_frequency = kwargs.get("cost_reveal_frequency", 1)
-        self.cost_reveal_function = kwargs.get("cost_reveal_function", lambda: 1)
         self.cost_arms = kwargs.get("cost_arms", self.n_arms)
         World.__init__(self, name=name, seed=seed)
 
-        self.build()
+        self.build(**kwargs)
 
-    def build(self):
+    def build(self, **kwargs):
         self._assign_reward_cost_variables()
         self._check_predefined_variables()
+        self.reward_reveal_frequency = kwargs.get(
+            "reward_reveal_frequency", [1] * self.reward_dimension
+        )
+        self.reward_reveal_function = kwargs.get("reward_reveal_function", lambda: 1)
+        self.cost_reveal_frequency = kwargs.get(
+            "cost_reveal_frequency", [1] * self.cost_dimension
+        )
+        self.cost_reveal_function = kwargs.get("cost_reveal_function", lambda: 1)
         self._reset_reward_function()
         self._reset_cost_function()
 
     def _reset_reward_function(self):
         self.reward_function = self.reward_function_class(
+            dimension=self.reward_dimension,
             means=self.reward_means,
             stds=self.reward_stds,
             scale=self.reward_scale,
-            dimension=self.reward_dimension,
             reveal_frequency=self.reward_reveal_frequency,
             reveal_function=self.reward_reveal_function,
             seed=self.seed,
@@ -79,10 +83,10 @@ class MultiArmedBandits(World):
 
     def _reset_cost_function(self):
         self.cost_function = self.cost_function_class(
+            dimension=self.cost_dimension,
             means=self.cost_means,
             stds=self.cost_stds,
             scale=self.cost_scale,
-            dimension=self.cost_dimension,
             reveal_frequency=self.cost_reveal_frequency,
             reveal_function=self.cost_reveal_function,
             seed=self.seed,

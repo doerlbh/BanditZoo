@@ -29,19 +29,42 @@ class TestBanditWorlds(TestCase):
 
     def test_the_world_can_add_agent_with_specified_reward_reveal_frequency(self):
         world = self.world
-        w = world(n_arms=5, reward_reveal_frequency=0.9)
+        w = world(n_arms=5, reward_reveal_frequency=[0.9])
         a = agents.Random()
         w.add_agent(a)
 
     def test_the_world_can_add_agent_with_specified_cost_reveal_frequency(self):
         world = self.world
-        w = world(n_arms=5, cost_reveal_frequency=0.9)
+        w = world(n_arms=5, cost_reveal_frequency=[0.9])
         a = agents.Random()
         w.add_agent(a)
 
     def test_the_world_can_add_agent_with_multiple_reward_dimensions(self):
         world = self.world
         w = world(n_arms=5, reward_dimension=3)
+        a = agents.Random()
+        w.add_agent(a)
+
+    def test_the_world_can_add_agent_with_specified_multi_reward_reveal_frequency(self):
+        world = self.world
+        w = world(n_arms=5, reward_dimension=2, reward_reveal_frequency=[0.9, 0.7])
+        a = agents.Random()
+        w.add_agent(a)
+
+    def test_the_world_throws_error_if_feedback_reveal_frequency_mismatches_dimension(
+        self,
+    ):
+        world = self.world
+        with self.assertRaises(Exception) as context:
+            w = world(n_arms=5, reward_dimension=1, reward_reveal_frequency=[0.9, 0.7])
+        self.assertTrue(
+            "Please specify the same shape for feedback dimension and reveal_frequency, now 1 and 2"
+            in str(context.exception)
+        )
+
+    def test_the_world_can_add_agent_with_specified_multi_cost_reveal_frequency(self):
+        world = self.world
+        w = world(n_arms=5, cost_dimension=2, cost_reveal_frequency=[0.9, 0.7])
         a = agents.Random()
         w.add_agent(a)
 

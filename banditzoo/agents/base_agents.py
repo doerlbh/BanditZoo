@@ -146,7 +146,7 @@ class MultiObjectiveAgent(object):
         self.obj_func = obj_func  # the combined objective function
         self.obj_params = obj_params  # the params to compute objective function
 
-    def combine_feedbacks(self, feedbacks: Dict[str, Any]) -> float:
+    def _combine_feedbacks(self, feedbacks: Dict[str, Any]):
         return self.obj_func(feedbacks, self.obj_params)
 
 

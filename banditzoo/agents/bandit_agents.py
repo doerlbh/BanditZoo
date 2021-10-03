@@ -52,7 +52,7 @@ class MultiArmedAgent(Agent):
                 self.oracle = [0] * self.n_arms
 
     def _update_metrics(self, feedbacks):
-        reward = self.combine_feedbacks(feedbacks)
+        reward = self._combine_feedbacks(feedbacks)
         self.t_t += 1
         self.Q[self.i_t] = (self.Q[self.i_t] * self.H[self.i_t] + reward) / (
             self.H[self.i_t] + 1
@@ -85,7 +85,7 @@ class ContextualAgent(Agent):
         self.context_dimension = context_dimension  # dimension of the context, e.g. 100
 
     def _update_metrics(self, feedbacks):
-        feedbacks = self.combine_feedbacks(feedbacks)
+        feedbacks = self._combine_feedbacks(feedbacks)
         self.t_t += 1
         self.reward.append(feedbacks)
         self.regret.append(-1)  # placeholder
@@ -143,7 +143,7 @@ class ContextualCombinatorialAgent(CombinatorialAgent, ContextualAgent):
         ContextualAgent.build(self, context_dimension=context_dimension)
 
     def _update_metrics(self, feedbacks):
-        feedbacks = self.combine_feedbacks(feedbacks)
+        feedbacks = self._combine_feedbacks(feedbacks)
         self.t_t += 1
         self.reward.append(feedbacks)
         self.regret.append(-1)  # placeholder
@@ -207,7 +207,7 @@ class TS(MultiArmedAgent):
         return self.i_t
 
     def _update_agent(self, feedbacks=None):
-        feedbacks = self.combine_feedbacks(feedbacks)
+        feedbacks = self._combine_feedbacks(feedbacks)
         self.S[self.i_t] += feedbacks
         self.F[self.i_t] += 1 - feedbacks
 
@@ -289,10 +289,115 @@ class UCB1(OGreedy):
         if self.t_t < self.n_arms:
             self.i_t = self.t_t
         else:
-            self.i_t = np.argmax(
-                self.Q + np.sqrt(2 * np.log(self.t_t) / np.array(self.H))
-            )
+            self.i_t = np.argmax(self.Q + self._confidence())
         return self.i_t
+
+    def _confidence(self):
+        return np.sqrt(2 * np.log(self.t_t) / np.array(self.H))
+
+    def _update_agent(self, feedbacks=None):
+        pass
+
+
+class IUCB(OGreedy):
+    """
+    Imputation Upper Confidence Bound (IUCB) algorithm.
+
+    Reference: Bouneffouf, D. & Lin, B. (2021). Multi-Armed Bandit with Sparse and Noisy
+    Feedback with application to Question Answering System. arXiv preprint arXiv.
+    """
+
+    def __init__(
+        self,
+        name="IUCB",
+        seed=0,
+        **kwargs,
+    ):
+        OGreedy.__init__(self, name=name, seed=seed)
+        self.build(**kwargs)
+        self.phi = kwargs.get("phi", 0)
+        self.use_noisy = kwargs.get("use_noisy", True)
+        self.use_sparse = kwargs.get("use_sparse", True)
+        self.use_filter = kwargs.get("use_filter", True)
+        self.sparse_probability = kwargs.get("sparse_probability", 0.1)
+        self.noisy_reward = []
+        self.sparse_reward = []
+        self.oracle_estimate = []
+        self.recorded_estimate = []
+
+    def build(self, **kwargs):
+        OGreedy.build(self, **kwargs)
+
+        self.v_hat = 1
+        self.v_hat_s = 1
+        if self.n_arms is not None:  # initialize for sparse feedback
+            self.H_s = [0] * self.n_arms
+            self.Q_s = [0] * self.n_arms
+            self.confidence = np.array([0] * self.n_arms)
+            self.confidence_s = np.array([0] * self.n_arms)
+
+    def _confidence(self):
+        return self.confidence
+
+    def _combine_feedbacks(self, feedbacks):
+        rewards = feedbacks["rewards"]
+        if len(rewards) < 2:
+            rewards = rewards + [rewards[0]]
+        return rewards[0], rewards[1]
+
+    def _update_metrics(self, feedbacks):
+        noisy_reward, sparse_reward = self._combine_feedbacks(feedbacks)
+        noisy_reward = noisy_reward if self.use_noisy else 0
+        sparse_reward = sparse_reward if self.use_sparse else 0
+        self.noisy_reward.append(noisy_reward)
+        self.sparse_reward.append(sparse_reward or 0)
+        if self.use_noisy and self.use_filter:
+            noisy_reward = np.max(
+                [
+                    self.Q_s[self.i_t] - self.phi - self.confidence_s,
+                    np.min(
+                        [
+                            noisy_reward,
+                            self.Q_s[self.i_t] + self.phi + self.confidence_s,
+                        ]
+                    ),
+                ]
+            )
+        reward = noisy_reward + (sparse_reward or 0)
+        self.reward.append(reward)
+
+        self.t_t += 1
+        self.H[self.i_t] += 1
+        self.Q[self.i_t] = (self.Q[self.i_t] * (self.H[self.i_t] - 1) + reward) / (
+            self.H[self.i_t]
+        )
+        self.v_hat = (
+            self.Q[self.i_t] * self.H[self.i_t] - np.sum(self.reward)
+        ) / self.H[self.i_t]
+        self.confidence = (
+            np.sqrt(2 * self.v_hat * np.log(self.t_t) / self.H[self.i_t])
+            + 3 * np.log(self.t_t) / self.H[self.i_t]
+        )
+
+        if sparse_reward is not None:
+            self.Q_s[self.i_t] = (
+                self.Q_s[self.i_t] * (self.H_s[self.i_t] - 1) + sparse_reward
+            ) / (self.H[self.i_t])
+            self.v_hat_s = (
+                self.Q_s[self.i_t] * self.H_s[self.i_t] - np.sum(self.sparse_reward)
+            ) / self.H_s[self.i_t]
+            self.confidence_s[self.i_t] = (
+                np.sqrt(2 * self.v_hat_s * np.log(self.t_t) / self.H_s[self.i_t])
+                + 3 * np.log(self.t_t) / self.H_s[self.i_t]
+            )
+            self.H_s[self.i_t] += 1
+
+        self.oracle_estimate.append(self.Q[np.argmax(self.oracle)])
+        self.recorded_estimate.append(self.Q[self.i_t])
+        self.regret.append(
+            (1 + self.sparse_probability) * np.sum(self.oracle_estimate)
+            - np.sum(self.recorded_estimate)
+        )
 
     def _update_agent(self, feedbacks=None):
         pass
@@ -341,7 +446,7 @@ class CTS(ContextualAgent):
         return self.i_t
 
     def _update_agent(self, feedbacks):
-        feedbacks = self.combine_feedbacks(feedbacks)
+        feedbacks = self._combine_feedbacks(feedbacks)
         i = self.i_t
         self.B_i[i] = self.nabla * self.B_i[i] + self.c_t @ self.c_t.T
         self.z_i[i] += self.c_t * feedbacks
@@ -392,7 +497,7 @@ class LinUCB(ContextualAgent):
         return self.i_t
 
     def _update_agent(self, feedbacks):
-        feedbacks = self.combine_feedbacks(feedbacks)
+        feedbacks = self._combine_feedbacks(feedbacks)
         i = self.i_t
         self.A_i[i] = self.nabla * self.A_i[i] + self.c_t @ self.c_t.T
         self.b_i[i] += self.c_t * feedbacks
@@ -460,7 +565,7 @@ class CCTS(ContextualCombinatorialAgent):
         return self.i_t
 
     def _update_agent(self, feedbacks):
-        feedbacks = self.combine_feedbacks(feedbacks)
+        feedbacks = self._combine_feedbacks(feedbacks)
         for k in range(self.action_dimension):
             i = self.i_t[k]
             self.B_i_k[k][i] = self.nabla * self.B_i_k[k][i] + self.c_t @ self.c_t.T

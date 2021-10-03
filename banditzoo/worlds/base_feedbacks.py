@@ -26,6 +26,14 @@ feedback = f.get(action)
 from abc import abstractmethod
 import numpy as np
 
+from typing import (
+    Any,
+    List,
+    Dict,
+    Optional,
+    Callable,
+)
+
 
 class Feedback(object):
     """
@@ -33,14 +41,19 @@ class Feedback(object):
     """
 
     def __init__(
-        self, name=None, seed=0, reveal_frequency=1, reveal_function=lambda: 1
+        self,
+        dimension: int,
+        name: str = None,
+        seed: int = 0,
+        reveal_frequency: List[float] = [1],
+        reveal_function: Callable = lambda: 1,
     ):
         """Initialize the base feedback object.
 
         Args:
             name (str, optional): [feedback name]. Defaults to None.
             seed (int, optional): [random seed]. Defaults to 0.
-            reveal_frequency (float, optional): [frequency to reveal feedback], Defaults to 1.
+            reveal_frequency (List[float], optional): [frequency to reveal feedback], Defaults to 1s.
             reveal_function (Callable, optional): [function to reveal feedback], Defaults to lambda:1.
         """
 
@@ -48,24 +61,36 @@ class Feedback(object):
         self.seed = seed
         self.reveal_frequency = reveal_frequency
         self.reveal_function = reveal_function
+        self.dimension = dimension
         np.random.seed(seed)
+
+        if self.dimension != len(self.reveal_frequency):
+            raise ValueError(
+                "Please specify the same shape for feedback dimension and reveal_frequency, now "
+                + str(self.dimension)
+                + " and "
+                + str(len(self.reveal_frequency))
+            )
 
         self.feedback_function = None
 
     def get(self, action, one_hot=False):
-        reveal = self.reveal_function() * np.random.binomial(1, self.reveal_frequency)
+        reveal = [
+            self.reveal_function() * np.random.binomial(1, rf)
+            for rf in self.reveal_frequency
+        ]
         self.feedback_function = self.draw_function()
         if one_hot:
             actual_feedbacks = [action @ np.array(self.feedback_function).squeeze()]
         else:
             actual_feedbacks = [r[action] for r in self.feedback_function]
-        if reveal:
-            feedbacks = {
-                "revealed_feedback": actual_feedbacks,
-                "hidden_feedback": actual_feedbacks,
-            }
-        else:
-            feedbacks = {"revealed_feedback": None, "hidden_feedback": actual_feedbacks}
+        feedbacks = {
+            "revealed_feedback": actual_feedbacks,
+            "hidden_feedback": actual_feedbacks,
+        }
+        for i in range(self.dimension):
+            if not reveal[i]:
+                feedbacks["revealed_feedback"][i] = None
         return feedbacks
 
     @abstractmethod
@@ -86,8 +111,8 @@ class GaussianFeedback(Feedback):
         dimension: int,
         name: str = None,
         seed: int = 0,
-        reveal_frequency: int = 1,
-        reveal_function=lambda: 1,
+        reveal_frequency: List[float] = [1],
+        reveal_function: Callable = lambda: 1,
         **kwargs
     ):
         """Initialize the Gaussian feedback object.
@@ -99,15 +124,15 @@ class GaussianFeedback(Feedback):
             dimension (int): [the number of stream or dimension of the feedback parameters].
             name (str, optional): [feedback name]. Defaults to None.
             seed (int, optional): [random seed]. Defaults to 0.
-            reveal_frequency (float, optional): [frequency to reveal feedback], Defaults to 1.
+            reveal_frequency (List[float], optional): [frequency to reveal feedback], Defaults to 1s.
             reveal_function (Callable, optional): [function to reveal feedback], Defaults to lambda:1.
         """
         self.means = means
         self.stds = stds
         self.scale = scale
-        self.dimension = dimension
         Feedback.__init__(
             self,
+            dimension=dimension,
             name=name,
             seed=seed,
             reveal_frequency=reveal_frequency,
@@ -134,8 +159,8 @@ class BernoulliFeedback(Feedback):
         dimension: int,
         name: str = None,
         seed: int = 0,
-        reveal_frequency: int = 1,
-        reveal_function=lambda: 1,
+        reveal_frequency: List[float] = [1],
+        reveal_function: Callable = lambda: 1,
         **kwargs
     ):
         """Initialize the Bernoulli feedback object.
@@ -147,15 +172,15 @@ class BernoulliFeedback(Feedback):
             dimension (int): [the number of stream or dimension of the feedback parameters].
             name (str, optional): [feedback name]. Defaults to None.
             seed (int, optional): [random seed]. Defaults to 0.
-            reveal_frequency (float, optional): [frequency to reveal feedback], Defaults to 1.
+            reveal_frequency (List[float], optional): [frequency to reveal feedback], Defaults to 1s.
             reveal_function (Callable, optional): [function to reveal feedback], Defaults to lambda:1.
         """
         self.means = means
         self.stds = stds
         self.scale = scale
-        self.dimension = dimension
         Feedback.__init__(
             self,
+            dimension=dimension,
             name=name,
             seed=seed,
             reveal_frequency=reveal_frequency,
