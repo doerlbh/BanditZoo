@@ -317,5 +317,4 @@ class TestMultiObjectiveGames(TestCase):
         g.run_experiments(T=20)
         expected_shape = [96, 7]
         metrics = g.get_pareto_metrics(quantile_bin=True, n_bins=3)
-        print(metrics.shape)
         np.allclose(metrics.shape, expected_shape)

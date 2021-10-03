@@ -31,7 +31,7 @@ def default_obj(feedbacks, obj_params):
     Returns:
         [Any]: an averaged reward functions modulated by the weight
     """
-    return np.mean(feedbacks["rewards"])
+    return np.mean([x for x in feedbacks["rewards"] if x is not None])
 
 
 def budget_obj_v1(feedbacks, obj_params):

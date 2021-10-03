@@ -18,6 +18,7 @@ from banditzoo import agents
         {"agent": agents.OGreedy},
         {"agent": agents.EGreedy},
         {"agent": agents.UCB1},
+        {"agent": agents.IUCB},
         {"agent": agents.CTS},
         {"agent": agents.LinUCB},
         {"agent": agents.CCTS},
@@ -53,7 +54,7 @@ class TestMultiArmedAgents(TestCase):
     def test_the_agent_can_update(self):
         a = self.agent(n_arms=5)
         action = a.act()
-        feedbacks = {"rewards": 1}
+        feedbacks = {"rewards": [1]}
         a.update(feedbacks)
 
 
@@ -78,7 +79,7 @@ class TestContextualAgents(TestCase):
         context = np.arange(10)
         a.observe(context)
         action = a.act()
-        feedbacks = {"rewards": 10}
+        feedbacks = {"rewards": [10]}
         a.update(feedbacks)
 
 
@@ -107,7 +108,7 @@ class TestContextualCombinatorialAgents(TestCase):
         context = np.arange(12)
         a.observe(context)
         action = a.act()
-        feedbacks = {"rewards": 10}
+        feedbacks = {"rewards": [10]}
         a.update(feedbacks)
 
 

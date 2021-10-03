@@ -163,15 +163,21 @@ class MultiArmedBandits(World):
         return metrics_dict
 
     def _update_metrics(self, metrics, feedbacks, agent):
-        metrics["reward"].append(metrics["reward"][-1] + np.mean(feedbacks["rewards"]))
-        metrics["cost"].append(metrics["cost"][-1] + np.mean(feedbacks["costs"]))
+        metrics["reward"].append(
+            metrics["reward"][-1]
+            + np.mean([x for x in feedbacks["rewards"] if x is not None])
+        )
+        metrics["cost"].append(
+            metrics["cost"][-1]
+            + np.mean([x for x in feedbacks["costs"] if x is not None])
+        )
         for i in range(self.reward_dimension):
             metrics["reward_" + str(i)].append(
-                metrics["reward_" + str(i)][-1] + feedbacks["rewards"][i]
+                metrics["reward_" + str(i)][-1] + (feedbacks["rewards"][i] or 0)
             )
         for i in range(self.cost_dimension):
             metrics["cost_" + str(i)].append(
-                metrics["cost_" + str(i)][-1] + feedbacks["costs"][i]
+                metrics["cost_" + str(i)][-1] + (feedbacks["costs"][i] or 0)
             )
         metrics["regret"].append(agent.regret[-1])
         return metrics

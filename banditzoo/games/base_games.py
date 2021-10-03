@@ -130,7 +130,6 @@ class Game(object):
         agg_metrics = defaultdict(lambda: [])
         for k in self.world_names:
             metrics_keys = list(self.world_pools[k][0].metrics[0].keys())
-            print(metrics_keys)
             time_length = len(self.world_pools[k][0].metrics[0][metrics_keys[0]])
             for i in range(self.n_world_instances):
                 for a in self.agent_names:

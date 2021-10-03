@@ -36,6 +36,8 @@ class MultiArmedAgent(Agent):
     ):
         Agent.__init__(self, name=name, seed=seed)
 
+        self.oracle_estimate = []
+        self.recorded_estimate = []
         self.build(**kwargs)
 
     def build(self, **kwargs):
@@ -59,8 +61,10 @@ class MultiArmedAgent(Agent):
         )
         self.H[self.i_t] += 1
         self.reward.append(reward)
+        self.oracle_estimate.append(self.Q[np.argmax(self.oracle)])
+        self.recorded_estimate.append(self.Q[self.i_t])
         self.regret.append(
-            (np.max(self.oracle) * self.t_t - np.sum(self.reward)) / self.t_t
+            np.sum(self.oracle_estimate) - np.sum(self.recorded_estimate)
         )
 
 
@@ -322,16 +326,14 @@ class IUCB(OGreedy):
         self.sparse_probability = kwargs.get("sparse_probability", 0.1)
         self.noisy_reward = []
         self.sparse_reward = []
-        self.oracle_estimate = []
-        self.recorded_estimate = []
 
     def build(self, **kwargs):
         OGreedy.build(self, **kwargs)
 
-        self.v_hat = 1
-        self.v_hat_s = 1
+        self.v_hat = 0
+        self.v_hat_s = 0
         if self.n_arms is not None:  # initialize for sparse feedback
-            self.H_s = [0] * self.n_arms
+            self.H_s = [1] * self.n_arms
             self.Q_s = [0] * self.n_arms
             self.confidence = np.array([0] * self.n_arms)
             self.confidence_s = np.array([0] * self.n_arms)
@@ -354,11 +356,11 @@ class IUCB(OGreedy):
         if self.use_noisy and self.use_filter:
             noisy_reward = np.max(
                 [
-                    self.Q_s[self.i_t] - self.phi - self.confidence_s,
+                    self.Q_s[self.i_t] - self.phi - self.confidence_s[self.i_t],
                     np.min(
                         [
                             noisy_reward,
-                            self.Q_s[self.i_t] + self.phi + self.confidence_s,
+                            self.Q_s[self.i_t] + self.phi + self.confidence_s[self.i_t],
                         ]
                     ),
                 ]
@@ -372,7 +374,7 @@ class IUCB(OGreedy):
             self.H[self.i_t]
         )
         self.v_hat = (
-            self.Q[self.i_t] * self.H[self.i_t] - np.sum(self.reward)
+            self.v_hat * (self.H[self.i_t] - 1) + (self.Q[self.i_t] - reward) ** 2
         ) / self.H[self.i_t]
         self.confidence = (
             np.sqrt(2 * self.v_hat * np.log(self.t_t) / self.H[self.i_t])
@@ -382,10 +384,11 @@ class IUCB(OGreedy):
         if sparse_reward is not None:
             self.Q_s[self.i_t] = (
                 self.Q_s[self.i_t] * (self.H_s[self.i_t] - 1) + sparse_reward
-            ) / (self.H[self.i_t])
+            ) / self.H[self.i_t]
             self.v_hat_s = (
-                self.Q_s[self.i_t] * self.H_s[self.i_t] - np.sum(self.sparse_reward)
-            ) / self.H_s[self.i_t]
+                self.v_hat_s * (self.H[self.i_t] - 1)
+                + (self.Q_s[self.i_t] - sparse_reward) ** 2
+            ) / self.H[self.i_t]
             self.confidence_s[self.i_t] = (
                 np.sqrt(2 * self.v_hat_s * np.log(self.t_t) / self.H_s[self.i_t])
                 + 3 * np.log(self.t_t) / self.H_s[self.i_t]

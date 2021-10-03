@@ -19,7 +19,7 @@ def plot_results(metrics):
 
 
 def main():
-    g = games.Game(N=3, n_arms=10)
+    g = games.Game(n_world_instances=3, n_agent_instances=10)
     g.add_world_class(worlds.BernoulliMultiArmedBandits, n_arms=5, name="MAB5")
     g.add_world_class(worlds.BernoulliMultiArmedBandits, n_arms=3, name="MAB3")
     g.add_agent_class(agents.TS, name="Thompson Sampling")
