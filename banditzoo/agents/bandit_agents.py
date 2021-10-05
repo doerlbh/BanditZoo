@@ -42,7 +42,7 @@ class MultiArmedAgent(Agent):
 
     def build(self, **kwargs):
         n_arms = kwargs.get("n_arms", None)
-        oracle = kwargs.get("oracle", None)
+        oracle = kwargs.get("reward_means", None)
 
         self.n_arms = n_arms  # number of possible action arms, e.g. 5
         if self.n_arms is not None:
@@ -61,7 +61,8 @@ class MultiArmedAgent(Agent):
         )
         self.H[self.i_t] += 1
         self.reward.append(reward)
-        self.oracle_estimate.append(self.Q[np.argmax(self.oracle)])
+        self.oracle_estimate.append(np.max(self.Q))
+        # self.oracle_estimate.append(self.Q[np.argmax(self.oracle[:,0])])
         self.recorded_estimate.append(self.Q[self.i_t])
         self.regret.append(
             np.sum(self.oracle_estimate) - np.sum(self.recorded_estimate)
@@ -357,6 +358,7 @@ class IUCB(OGreedy):
             noisy_reward = np.max(
                 [
                     self.Q_s[self.i_t] - self.phi - self.confidence_s[self.i_t],
+                    0,
                     np.min(
                         [
                             noisy_reward,
@@ -395,7 +397,7 @@ class IUCB(OGreedy):
             )
             self.H_s[self.i_t] += 1
 
-        self.oracle_estimate.append(self.Q[np.argmax(self.oracle)])
+        self.oracle_estimate.append(np.max(self.Q))
         self.recorded_estimate.append(self.Q[self.i_t])
         self.regret.append(
             (1 + self.sparse_probability) * np.sum(self.oracle_estimate)

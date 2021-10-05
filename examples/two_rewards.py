@@ -19,12 +19,12 @@ def plot_results(metrics):
 
 
 def main():
-    sparse_probability = 0.05
+    sparse_probability = 0.2
     g = games.Game(n_world_instances=10, n_agent_instances=10)
     g.add_world_class(
         worlds.MultiArmedBandits,
         n_arms=3,
-        reward_stds=[[[5, 1]] * 3][0],
+        reward_stds=[[[2, 1]] * 3][0],
         reward_dimension=2,
         reward_reveal_frequency=[1, sparse_probability],
         name="MAB 3 arms (p=" + str(sparse_probability) + ")",
@@ -32,7 +32,7 @@ def main():
     g.add_world_class(
         worlds.MultiArmedBandits,
         n_arms=10,
-        reward_stds=[[[5, 1]] * 10][0],
+        reward_stds=[[[2, 1]] * 10][0],
         reward_dimension=2,
         reward_reveal_frequency=[1, sparse_probability],
         name="MAB 10 arms (p=" + str(sparse_probability) + ")",
