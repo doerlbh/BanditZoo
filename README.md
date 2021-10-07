@@ -5,3 +5,14 @@
 Python package of bandits and RL agents in different real-world environments
 
 Created by [Baihan Lin](https://www.baihan.nyc/), Columbia University
+
+
+
+    @article{lin2021banditzoo,
+      title={{BanditZoo: a Python toolbox for real-world reinforcement learning simulation and evaluation}},
+      author={Lin, Baihan},
+      journal={GitHub repository},
+      year={2021},
+    }
+
+
