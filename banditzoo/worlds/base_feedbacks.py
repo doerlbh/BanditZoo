@@ -108,6 +108,8 @@ class GaussianFeedback(Feedback):
         means: np.ndarray,
         stds: np.ndarray,
         scale: float,
+        min: float,
+        max: float,
         dimension: int,
         name: str = None,
         seed: int = 0,
@@ -121,6 +123,8 @@ class GaussianFeedback(Feedback):
             means (np.ndarray): [the average values of the feedback].
             stds (np.ndarray): [the standard deviations of the feedback].
             scale (float): [the scale of the feedback].
+            min (float): [the clipping min of the feedback].
+            max (float): [the clipping max of the feedback].
             dimension (int): [the number of stream or dimension of the feedback parameters].
             name (str, optional): [feedback name]. Defaults to None.
             seed (int, optional): [random seed]. Defaults to 0.
@@ -130,6 +134,8 @@ class GaussianFeedback(Feedback):
         self.means = means
         self.stds = stds
         self.scale = scale
+        self.min = min
+        self.max = max
         Feedback.__init__(
             self,
             dimension=dimension,
@@ -140,10 +146,18 @@ class GaussianFeedback(Feedback):
         )
 
     def draw_function(self):
-        return [
-            np.random.multivariate_normal(self.means[:, i], np.diag(self.stds[:, i]))
-            for i in range(self.dimension)
-        ]
+        return list(
+            np.clip(
+                [
+                    np.random.multivariate_normal(
+                        self.means[:, i], np.diag(self.stds[:, i])
+                    )
+                    for i in range(self.dimension)
+                ],
+                self.min,
+                self.max,
+            )
+        )
 
 
 class BernoulliFeedback(Feedback):
@@ -156,6 +170,8 @@ class BernoulliFeedback(Feedback):
         means: np.ndarray,
         stds: np.ndarray,
         scale: float,
+        min: float,
+        max: float,
         dimension: int,
         name: str = None,
         seed: int = 0,
@@ -169,6 +185,8 @@ class BernoulliFeedback(Feedback):
             means (np.ndarray): [the average values of the feedback].
             stds (np.ndarray): [the standard deviations of the feedback].
             scale (float): [the scale of the feedback].
+            min (float): [the clipping min of the feedback].
+            max (float): [the clipping max of the feedback].
             dimension (int): [the number of stream or dimension of the feedback parameters].
             name (str, optional): [feedback name]. Defaults to None.
             seed (int, optional): [random seed]. Defaults to 0.
@@ -178,6 +196,8 @@ class BernoulliFeedback(Feedback):
         self.means = means
         self.stds = stds
         self.scale = scale
+        self.min = min
+        self.max = max
         Feedback.__init__(
             self,
             dimension=dimension,
@@ -188,4 +208,13 @@ class BernoulliFeedback(Feedback):
         )
 
     def draw_function(self):
-        return [np.random.binomial(1, self.means[:, i]) for i in range(self.dimension)]
+        return list(
+            np.clip(
+                [
+                    np.random.binomial(1, self.means[:, i])
+                    for i in range(self.dimension)
+                ],
+                self.min,
+                self.max,
+            )
+        )

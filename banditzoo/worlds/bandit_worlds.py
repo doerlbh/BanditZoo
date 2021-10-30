@@ -41,6 +41,11 @@ class MultiArmedBandits(World):
         self.reward_means = kwargs.get("reward_means", None)
         self.reward_stds = kwargs.get("reward_stds", None)
         self.reward_scale = kwargs.get("reward_scale", 1)
+        self.reward_base = kwargs.get("reward_base", 0)
+        self.reward_min = kwargs.get("reward_min", 0)
+        self.reward_max = kwargs.get("reward_max", 1)
+        self.cost_min = kwargs.get("cost_min", 0)
+        self.cost_max = kwargs.get("cost_max", np.float("inf"))
         self.reward_dimension = kwargs.get("reward_dimension", 1)
         self.reward_function_class = kwargs.get(
             "reward_function_class", GaussianFeedback
@@ -75,6 +80,8 @@ class MultiArmedBandits(World):
             means=self.reward_means,
             stds=self.reward_stds,
             scale=self.reward_scale,
+            min=self.reward_min,
+            max=self.reward_max,
             reveal_frequency=self.reward_reveal_frequency,
             reveal_function=self.reward_reveal_function,
             seed=self.seed,
@@ -87,6 +94,8 @@ class MultiArmedBandits(World):
             means=self.cost_means,
             stds=self.cost_stds,
             scale=self.cost_scale,
+            min=self.cost_min,
+            max=self.cost_max,
             reveal_frequency=self.cost_reveal_frequency,
             reveal_function=self.cost_reveal_function,
             seed=self.seed,
@@ -97,7 +106,7 @@ class MultiArmedBandits(World):
         def check_none_and_assign(a, b):
             return b if a is None else np.array(a)
 
-        self.reward_means = check_none_and_assign(
+        self.reward_means = self.reward_base + check_none_and_assign(
             self.reward_means,
             np.random.uniform(
                 0, self.reward_scale, (self.n_arms, self.reward_dimension)
@@ -106,10 +115,10 @@ class MultiArmedBandits(World):
         self.reward_stds = check_none_and_assign(
             self.reward_stds,
             np.random.uniform(
-                0, self.reward_scale, (self.n_arms, self.reward_dimension)
+                0, self.reward_scale / self.n_arms, (self.n_arms, self.reward_dimension)
             ),
         )
-        self.cost_means = check_none_and_assign(
+        self.cost_means = self.reward_base + check_none_and_assign(
             self.cost_means,
             np.random.uniform(
                 0, self.cost_scale, (self.cost_arms, self.cost_dimension)
@@ -118,7 +127,9 @@ class MultiArmedBandits(World):
         self.cost_stds = check_none_and_assign(
             self.cost_stds,
             np.random.uniform(
-                0, self.cost_scale, (self.cost_arms, self.cost_dimension)
+                0,
+                self.cost_scale / self.cost_arms,
+                (self.cost_arms, self.cost_dimension),
             ),
         )
 
@@ -150,6 +161,7 @@ class MultiArmedBandits(World):
         pass
 
     def _assign_feedbacks(self, action):
+        # print(self.reward_function.get(action)["revealed_feedback"])
         rewards = self.reward_function.get(action)["revealed_feedback"]
         costs = self.cost_function.get(action)["revealed_feedback"]
         return {"rewards": rewards, "costs": costs}

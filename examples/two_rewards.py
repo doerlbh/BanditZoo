@@ -11,6 +11,12 @@ def plot_results(metrics):
     import seaborn as sns
 
     metric_names = ["reward", "regret"]
+    print(
+        metrics[metrics["time"] == 100][["world", "agent"] + metric_names]
+        .groupby(["world", "agent"])
+        .mean()
+    )
+
     for m in metric_names:
         sns_plot = sns.relplot(
             data=metrics, x="time", y=m, hue="agent", col="world", kind="line", ci=68
@@ -19,23 +25,29 @@ def plot_results(metrics):
 
 
 def main():
-    sparse_probability = 0.2
+    sparse_probability = 0.1
+    std_ratio = 5
+    std_base = 0.01
     g = games.Game(n_world_instances=10, n_agent_instances=10)
     g.add_world_class(
         worlds.MultiArmedBandits,
         n_arms=3,
-        reward_stds=[[[2, 1]] * 3][0],
+        reward_stds=[[[std_ratio * std_base, std_base]] * 3][0],
         reward_dimension=2,
         reward_reveal_frequency=[1, sparse_probability],
-        name="MAB 3 arms (p=" + str(sparse_probability) + ")",
+        name="MAB 3 arms (p=" + str(sparse_probability) + ", r=" + str(std_ratio) + ")",
     )
     g.add_world_class(
         worlds.MultiArmedBandits,
         n_arms=10,
-        reward_stds=[[[2, 1]] * 10][0],
+        reward_stds=[[[std_ratio * std_base, std_base]] * 10][0],
         reward_dimension=2,
         reward_reveal_frequency=[1, sparse_probability],
-        name="MAB 10 arms (p=" + str(sparse_probability) + ")",
+        name="MAB 10 arms (p="
+        + str(sparse_probability)
+        + ", r="
+        + str(std_ratio)
+        + ")",
     )
     g.add_agent_class(agents.IUCB, sparse_probability=sparse_probability, name="IUCB")
     g.add_agent_class(

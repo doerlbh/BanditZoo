@@ -36,7 +36,7 @@ class MultiArmedAgent(Agent):
     ):
         Agent.__init__(self, name=name, seed=seed)
 
-        self.oracle_estimate = []
+        self.optimal_estimate = []
         self.recorded_estimate = []
         self.build(**kwargs)
 
@@ -44,6 +44,7 @@ class MultiArmedAgent(Agent):
         n_arms = kwargs.get("n_arms", None)
         oracle = kwargs.get("reward_means", None)
 
+        self.sparse_probability = kwargs.get("sparse_probability", 0)
         self.n_arms = n_arms  # number of possible action arms, e.g. 5
         if self.n_arms is not None:
             self.H = [0] * self.n_arms  # the historical time certain arm is pulled
@@ -61,11 +62,18 @@ class MultiArmedAgent(Agent):
         )
         self.H[self.i_t] += 1
         self.reward.append(reward)
-        self.oracle_estimate.append(np.max(self.Q))
-        # self.oracle_estimate.append(self.Q[np.argmax(self.oracle[:,0])])
-        self.recorded_estimate.append(self.Q[self.i_t])
+        if np.array(self.oracle).ndim == 1:
+            reward_means = self.oracle
+        else:
+            reward_means = self.oracle[:, 0]
+        # self.optimal_estimate.append(self.Q[np.argmax(reward_means)])
+        # self.optimal_estimate.append(np.max(self.Q))
+        # self.recorded_estimate.append(self.Q[self.i_t])
+        self.optimal_estimate.append(np.max(reward_means))
+        self.recorded_estimate.append(reward_means[self.i_t])
         self.regret.append(
-            np.sum(self.oracle_estimate) - np.sum(self.recorded_estimate)
+            (1 + self.sparse_probability)
+            * (np.sum(self.optimal_estimate) - np.sum(self.recorded_estimate))
         )
 
 
@@ -304,7 +312,7 @@ class UCB1(OGreedy):
         pass
 
 
-class IUCB(OGreedy):
+class IUCB(UCB1):
     """
     Imputation Upper Confidence Bound (IUCB) algorithm.
 
@@ -318,7 +326,7 @@ class IUCB(OGreedy):
         seed=0,
         **kwargs,
     ):
-        OGreedy.__init__(self, name=name, seed=seed)
+        UCB1.__init__(self, name=name, seed=seed)
         self.build(**kwargs)
         self.phi = kwargs.get("phi", 0)
         self.use_noisy = kwargs.get("use_noisy", True)
@@ -331,11 +339,11 @@ class IUCB(OGreedy):
     def build(self, **kwargs):
         OGreedy.build(self, **kwargs)
 
-        self.v_hat = 0
-        self.v_hat_s = 0
         if self.n_arms is not None:  # initialize for sparse feedback
-            self.H_s = [1] * self.n_arms
-            self.Q_s = [0] * self.n_arms
+            self.H_s = np.array([1] * self.n_arms)
+            self.Q_s = np.array([0] * self.n_arms)
+            self.v_hat = np.array([0] * self.n_arms)
+            self.v_hat_s = np.array([0] * self.n_arms)
             self.confidence = np.array([0] * self.n_arms)
             self.confidence_s = np.array([0] * self.n_arms)
 
@@ -357,12 +365,23 @@ class IUCB(OGreedy):
         if self.use_noisy and self.use_filter:
             noisy_reward = np.max(
                 [
-                    self.Q_s[self.i_t] - self.phi - self.confidence_s[self.i_t],
-                    0,
+                    np.max(
+                        [
+                            self.Q_s[self.i_t] - self.phi - self.confidence_s[self.i_t],
+                            self.Q[self.i_t] - self.confidence[self.i_t],
+                        ]
+                    ),
                     np.min(
                         [
-                            noisy_reward,
-                            self.Q_s[self.i_t] + self.phi + self.confidence_s[self.i_t],
+                            self.Q[self.i_t] + self.confidence[self.i_t],
+                            np.min(
+                                [
+                                    noisy_reward,
+                                    self.Q_s[self.i_t]
+                                    - self.phi
+                                    + self.confidence_s[self.i_t],
+                                ]
+                            ),
                         ]
                     ),
                 ]
@@ -375,11 +394,12 @@ class IUCB(OGreedy):
         self.Q[self.i_t] = (self.Q[self.i_t] * (self.H[self.i_t] - 1) + reward) / (
             self.H[self.i_t]
         )
-        self.v_hat = (
-            self.v_hat * (self.H[self.i_t] - 1) + (self.Q[self.i_t] - reward) ** 2
+        self.v_hat[self.i_t] = (
+            self.v_hat[self.i_t] * (self.H[self.i_t] - 1)
+            + (self.Q[self.i_t] - reward) ** 2
         ) / self.H[self.i_t]
-        self.confidence = (
-            np.sqrt(2 * self.v_hat * np.log(self.t_t) / self.H[self.i_t])
+        self.confidence[self.i_t] = (
+            np.sqrt(2 * self.v_hat[self.i_t] * np.log(self.t_t) / self.H[self.i_t])
             + 3 * np.log(self.t_t) / self.H[self.i_t]
         )
 
@@ -387,21 +407,30 @@ class IUCB(OGreedy):
             self.Q_s[self.i_t] = (
                 self.Q_s[self.i_t] * (self.H_s[self.i_t] - 1) + sparse_reward
             ) / self.H[self.i_t]
-            self.v_hat_s = (
-                self.v_hat_s * (self.H[self.i_t] - 1)
+            self.v_hat_s[self.i_t] = (
+                self.v_hat_s[self.i_t] * (self.H[self.i_t] - 1)
                 + (self.Q_s[self.i_t] - sparse_reward) ** 2
             ) / self.H[self.i_t]
             self.confidence_s[self.i_t] = (
-                np.sqrt(2 * self.v_hat_s * np.log(self.t_t) / self.H_s[self.i_t])
+                np.sqrt(
+                    2 * self.v_hat_s[self.i_t] * np.log(self.t_t) / self.H_s[self.i_t]
+                )
                 + 3 * np.log(self.t_t) / self.H_s[self.i_t]
             )
             self.H_s[self.i_t] += 1
 
-        self.oracle_estimate.append(np.max(self.Q))
-        self.recorded_estimate.append(self.Q[self.i_t])
+        if np.array(self.oracle).ndim == 1:
+            reward_means = self.oracle
+        else:
+            reward_means = self.oracle[:, 0]
+        # self.optimal_estimate.append(self.Q[np.argmax(reward_means)])
+        # self.optimal_estimate.append(np.max(self.Q))
+        # self.recorded_estimate.append(self.Q[self.i_t])
+        self.optimal_estimate.append(np.max(reward_means))
+        self.recorded_estimate.append(reward_means[self.i_t])
         self.regret.append(
-            (1 + self.sparse_probability) * np.sum(self.oracle_estimate)
-            - np.sum(self.recorded_estimate)
+            (1 + self.sparse_probability)
+            * (np.sum(self.optimal_estimate) - np.sum(self.recorded_estimate))
         )
 
     def _update_agent(self, feedbacks=None):

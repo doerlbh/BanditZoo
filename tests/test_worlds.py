@@ -45,6 +45,14 @@ class TestBanditWorlds(TestCase):
         a = agents.Random()
         w.add_agent(a)
 
+    def test_the_world_can_add_agent_with_multiple_reward_dimensions_with_scale_and_base(
+        self,
+    ):
+        world = self.world
+        w = world(n_arms=5, reward_dimension=3, reward_scale=2, reward_base=3)
+        a = agents.Random()
+        w.add_agent(a)
+
     def test_the_world_can_add_agent_with_specified_multi_reward_reveal_frequency(self):
         world = self.world
         w = world(n_arms=5, reward_dimension=2, reward_reveal_frequency=[0.9, 0.7])
@@ -80,8 +88,8 @@ class TestBanditWorlds(TestCase):
         world = self.world
         w = world(
             n_arms=3,
-            reward_means=[[1, 2, 3], [2, 3, 1]],
-            reward_stds=[[0, 2, 1], [2, 1, 0]],
+            reward_means=[[1, 2], [2, 3], [2, 1]],
+            reward_stds=[[0, 2], [1, 2], [1, 0]],
             reward_dimension=1,
         )
         a = agents.Random(n_arms=3)
@@ -97,8 +105,8 @@ class TestBanditWorlds(TestCase):
         world = self.world
         w = world(
             n_arms=3,
-            cost_means=[[1, 2, 3], [2, 3, 1]],
-            cost_stds=[[0, 2, 1], [2, 1, 0]],
+            cost_means=[[1, 2], [3, 2], [3, 1]],
+            cost_stds=[[0, 2], [1, 2], [1, 0]],
         )
         a = agents.Random()
         w.add_agent(a)
