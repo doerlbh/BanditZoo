@@ -12,6 +12,8 @@
 #
 import os
 import sys
+sys.path.insert(0, os.path.abspath('.'))
+sys.path.insert(0, os.path.abspath('../'))
 sys.path.insert(0, os.path.abspath('../banditzoo'))
 
 import sphinx_rtd_theme
@@ -30,6 +32,13 @@ author = "Baihan Lin"
 # ones.
 extensions = [
     "sphinx_rtd_theme",
+    'sphinx.ext.autodoc',
+    'sphinx.ext.mathjax',
+    'sphinx.ext.coverage',
+    'sphinx.ext.viewcode',
+    'sphinx.ext.napoleon',
+    'nbsphinx',
+    'nbsphinx_link'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
