@@ -19,8 +19,9 @@ Classes of bandit agents.
 """
 
 import numpy as np
+from scipy import stats
 from .base_agents import Agent
-from .utils import default_obj
+from .utils import default_obj, increment_mean, increment_std
 
 
 class MultiArmedAgent(Agent):
@@ -213,9 +214,7 @@ class TS(MultiArmedAgent):
             self.F = [1] * self.n_arms  # failure
 
     def act(self):
-        theta = []
-        for i in range(self.n_arms):
-            theta.append(np.random.beta(self.S[i], self.F[i]))
+        theta = [np.random.beta(self.S[i], self.F[i]) for i in range(self.n_arms)]
         self.i_t = np.argmax(theta)
         return self.i_t
 
@@ -316,8 +315,8 @@ class IUCB(UCB1):
     """
     Imputation Upper Confidence Bound (IUCB) algorithm.
 
-    Reference: Bouneffouf, D. & Lin, B. (2021). Multi-Armed Bandit with Sparse and Noisy
-    Feedback with application to Question Answering System. arXiv preprint arXiv.
+    Reference: Bouneffouf, D., Oznur, A., Feraud, R., Lin, B. (2022). Multi-Armed Bandit
+    with Sparse and Noisy Feedback. arXiv preprint arXiv.
     """
 
     def __init__(
@@ -346,6 +345,8 @@ class IUCB(UCB1):
             self.v_hat_s = np.array([0] * self.n_arms)
             self.confidence = np.array([0] * self.n_arms)
             self.confidence_s = np.array([0] * self.n_arms)
+            self.Q_std = np.array([0] * self.n_arms)
+            self.Q_std_s = np.array([0] * self.n_arms)
 
     def _confidence(self):
         return self.confidence
@@ -361,24 +362,32 @@ class IUCB(UCB1):
         noisy_reward = noisy_reward if self.use_noisy else 0
         sparse_reward = sparse_reward if self.use_sparse else 0
         self.noisy_reward.append(noisy_reward)
-        self.sparse_reward.append(sparse_reward or 0)
+        self.sparse_reward.append(sparse_reward or np.nan)
         if self.use_noisy and self.use_filter:
             noisy_reward = np.max(
                 [
                     np.max(
                         [
-                            self.Q_s[self.i_t] - self.phi - self.confidence_s[self.i_t],
-                            self.Q[self.i_t] - self.confidence[self.i_t],
+                            self.Q_s[self.i_t]
+                            - self.phi
+                            - self.Q_std_s[self.i_t]
+                            - self.confidence_s[self.i_t],
+                            self.Q[self.i_t]
+                            - self.Q_std[self.i_t]
+                            - self.confidence[self.i_t],
                         ]
                     ),
                     np.min(
                         [
-                            self.Q[self.i_t] + self.confidence[self.i_t],
+                            self.Q[self.i_t]
+                            + self.Q_std[self.i_t]
+                            + self.confidence[self.i_t],
                             np.min(
                                 [
                                     noisy_reward,
                                     self.Q_s[self.i_t]
                                     - self.phi
+                                    + self.Q_std_s[self.i_t]
                                     + self.confidence_s[self.i_t],
                                 ]
                             ),
@@ -386,31 +395,34 @@ class IUCB(UCB1):
                     ),
                 ]
             )
-        reward = noisy_reward + (sparse_reward or 0)
-        self.reward.append(reward)
+        if sparse_reward:
+            reward = (noisy_reward + sparse_reward) / 2
+        else:
+            reward = noisy_reward
 
         self.t_t += 1
         self.H[self.i_t] += 1
-        self.Q[self.i_t] = (self.Q[self.i_t] * (self.H[self.i_t] - 1) + reward) / (
-            self.H[self.i_t]
+        self.Q_std[self.i_t] = increment_std(
+            reward, self.Q[self.i_t], self.Q_std[self.i_t], self.H[self.i_t]
         )
-        self.v_hat[self.i_t] = (
-            self.v_hat[self.i_t] * (self.H[self.i_t] - 1)
-            + (self.Q[self.i_t] - reward) ** 2
-        ) / self.H[self.i_t]
+        self.Q[self.i_t] = increment_mean(reward, self.Q[self.i_t], self.H[self.i_t])
+        self.v_hat[self.i_t] = self.Q_std[self.i_t] ** 2
         self.confidence[self.i_t] = (
             np.sqrt(2 * self.v_hat[self.i_t] * np.log(self.t_t) / self.H[self.i_t])
             + 3 * np.log(self.t_t) / self.H[self.i_t]
         )
 
         if sparse_reward is not None:
-            self.Q_s[self.i_t] = (
-                self.Q_s[self.i_t] * (self.H_s[self.i_t] - 1) + sparse_reward
-            ) / self.H[self.i_t]
-            self.v_hat_s[self.i_t] = (
-                self.v_hat_s[self.i_t] * (self.H[self.i_t] - 1)
-                + (self.Q_s[self.i_t] - sparse_reward) ** 2
-            ) / self.H[self.i_t]
+            self.Q_std_s[self.i_t] = increment_std(
+                sparse_reward,
+                self.Q_s[self.i_t],
+                self.Q_std_s[self.i_t],
+                self.H_s[self.i_t],
+            )
+            self.Q_s[self.i_t] = increment_mean(
+                sparse_reward, self.Q_s[self.i_t], self.H_s[self.i_t]
+            )
+            self.v_hat_s[self.i_t] = self.Q_std_s[self.i_t] ** 2
             self.confidence_s[self.i_t] = (
                 np.sqrt(
                     2 * self.v_hat_s[self.i_t] * np.log(self.t_t) / self.H_s[self.i_t]
@@ -423,18 +435,138 @@ class IUCB(UCB1):
             reward_means = self.oracle
         else:
             reward_means = self.oracle[:, 0]
-        # self.optimal_estimate.append(self.Q[np.argmax(reward_means)])
-        # self.optimal_estimate.append(np.max(self.Q))
-        # self.recorded_estimate.append(self.Q[self.i_t])
+        self.reward.append(reward)
         self.optimal_estimate.append(np.max(reward_means))
         self.recorded_estimate.append(reward_means[self.i_t])
         self.regret.append(
-            (1 + self.sparse_probability)
-            * (np.sum(self.optimal_estimate) - np.sum(self.recorded_estimate))
+            np.sum(self.optimal_estimate) - np.sum(self.recorded_estimate)
         )
 
     def _update_agent(self, feedbacks=None):
         pass
+
+
+class GTS(MultiArmedAgent):
+    """
+    Genetic Thompson Sampling algorithm.
+
+    Reference: Lin, B. (2022). Evolutionary Multi-Armed Bandits with Genetic Thompson
+    Sampling. arXiv preprint arXiv.
+    """
+
+    def __init__(
+        self,
+        name="GTS",
+        seed=0,
+        **kwargs,
+    ):
+        MultiArmedAgent.__init__(self, name=name, seed=seed)
+
+        self.build(**kwargs)
+
+    def build(self, **kwargs):
+        n_population = kwargs.get("n_population", 1)
+        beta_max_val = kwargs.get("beta_max_val", 100)
+        elite_ratio = kwargs.get("elite_ratio", 0.5)
+        mutation_times = kwargs.get("mutation_times", 1)
+        mutation_max_val = kwargs.get("mutation_max_val", 1)
+        do_crossover = kwargs.get("do_crossover", True)
+        do_mutation = kwargs.get("do_mutation", True)
+        start_crossover = kwargs.get("start_crossover", 0)
+        start_mutation = kwargs.get("start_mutation", 0)
+        end_crossover = kwargs.get("end_crossover", np.float("Inf"))
+        end_mutation = kwargs.get("end_mutation", np.float("Inf"))
+        MultiArmedAgent.build(self, **kwargs)
+        self.n_population = n_population
+        self.beta_max_val = beta_max_val
+        self.elite_ratio = np.min((1, elite_ratio))
+        self.mutation_times = mutation_times
+        self.mutation_max_val = np.max((1, mutation_max_val))
+        self.is_elites = np.array([True] * self.n_population)
+        self.do_crossover = do_crossover
+        self.do_mutation = do_mutation
+        self.start_crossover = start_crossover
+        self.start_mutation = start_mutation
+        self.end_crossover = end_crossover
+        self.end_mutation = end_mutation
+
+        self.Sf, self.Ff = [1] * self.n_population, [1] * self.n_population
+        self.Ss, self.Fs = [], []
+        if self.n_arms is not None:
+            self.Ss = [[1] * self.n_arms] * self.n_population  # success
+            self.Fs = [[1] * self.n_arms] * self.n_population  # failure
+
+    def act(self):
+        self.i_t_s = []
+        for m in range(self.n_population):
+            theta = [
+                np.random.beta(self.Ss[m][i], self.Fs[m][i]) for i in range(self.n_arms)
+            ]
+            self.i_t_s.append(np.argmax(theta))
+        self.i_t_s = np.array(self.i_t_s)
+        self.i_t = stats.mode(self.i_t_s)[0][0]
+        return self.i_t
+
+    def _update_agent(self, feedbacks=None):
+        feedbacks = self._combine_feedbacks(feedbacks)
+        adopted = self.i_t_s == self.i_t
+        for m in range(self.n_population):
+            if adopted[m]:
+                self.Sf[m] += feedbacks
+                self.Ff[m] += 1 - feedbacks
+                self.Ss[m][self.i_t] += feedbacks
+                self.Fs[m][self.i_t] += 1 - feedbacks
+
+        self._compute_fitness()
+
+        if (
+            self.do_crossover
+            and self.t_t >= self.start_crossover
+            and self.t_t < self.end_crossover
+        ):
+            self._elite_selection()
+            self._crossover()
+
+        if (
+            self.do_mutation
+            and self.t_t >= self.start_mutation
+            and self.t_t < self.end_mutation
+        ):
+            self._mutation()
+
+    def _compute_fitness(self):
+        self.fitness = np.array(
+            [np.random.beta(self.Sf[m], self.Ff[m]) for m in range(self.n_population)]
+        )
+
+    def _elite_selection(self):
+        self.fitness_threshold = np.quantile(self.fitness, 1 - self.elite_ratio)
+        self.is_elites = self.fitness >= self.fitness_threshold
+        self.elites = np.arange(self.n_population)[self.is_elites]
+        self.non_elites = np.arange(self.n_population)[~self.is_elites]
+
+    def _crossover(self):
+        for m in self.non_elites:
+            self.Sf[m], self.Ff[m] = 1, 1
+            parents = np.random.choice(self.elites, 2)
+            for k in range(self.n_arms):
+                dna_from = np.random.choice(parents)
+                self.Ss[m][k] = self.Ss[dna_from][k]
+                self.Fs[m][k] = self.Fs[dna_from][k]
+
+    def _mutation(self):
+        for i in range(self.mutation_times):
+            mutated_agent = np.random.choice(self.n_population)
+            mutated_arm = np.random.choice(self.n_arms)
+            mutated_val = np.random.uniform(
+                -self.mutation_max_val, self.mutation_max_val
+            )
+            self.Ss[mutated_agent][mutated_arm] = np.max(
+                (1, mutated_val + self.Ss[mutated_agent][mutated_arm])
+            )
+            self.Fs[mutated_agent][mutated_arm] = np.max(
+                (1, mutated_val + self.Fs[mutated_agent][mutated_arm])
+            )
 
 
 class CTS(ContextualAgent):

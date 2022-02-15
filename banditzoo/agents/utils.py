@@ -21,6 +21,40 @@ utils functions and classes related to agents
 import numpy as np
 
 
+def increment_mean(x, mu_tm1, n):
+    """Compute incremental sample mean
+
+    Args:
+        x (float): current value
+        mu_tm1 (float): last recorded mean
+        n (int): the sample size
+
+    Returns:
+        new_mean (float): new mean
+    """
+    new_mean = (x + mu_tm1 * (n - 1)) / n
+    return new_mean
+
+
+def increment_std(x, mu_tm1, s_tm1, n):
+    """Compute incremental sample std
+
+    Args:
+        x (float): current value
+        mu_tm1 (float): last recorded mean
+        s_tm1 (float): last recorded std
+        n (int): the sample size
+
+    Returns:
+        new_std (float): new std
+    """
+    if n < 2:
+        new_std = 0
+    else:
+        new_std = np.sqrt(s_tm1 ** 2 * (n - 2) / (n - 1) + (x - mu_tm1) ** 2 / n)
+    return new_std
+
+
 def default_obj(feedbacks, obj_params):
     """the averaged reward functions in multi-objective scenario
 

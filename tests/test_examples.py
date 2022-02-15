@@ -8,6 +8,7 @@ sys.path.insert(0, "..")
 from examples import epidemic
 from examples import multi_armed_bandit
 from examples import two_rewards
+from examples import evobandit
 
 
 class TestExamples(TestCase):
@@ -15,3 +16,4 @@ class TestExamples(TestCase):
         epidemic.test()
         multi_armed_bandit.test()
         two_rewards.test()
+        evobandit.test()

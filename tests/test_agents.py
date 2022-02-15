@@ -19,6 +19,7 @@ from banditzoo import agents
         {"agent": agents.EGreedy},
         {"agent": agents.UCB1},
         {"agent": agents.IUCB},
+        {"agent": agents.GTS},
         {"agent": agents.CTS},
         {"agent": agents.LinUCB},
         {"agent": agents.CCTS},
@@ -41,6 +42,8 @@ class TestAllAgents(TestCase):
         {"agent": agents.OGreedy},
         {"agent": agents.EGreedy},
         {"agent": agents.UCB1},
+        {"agent": agents.IUCB},
+        {"agent": agents.GTS},
     ]
 )
 class TestMultiArmedAgents(TestCase):

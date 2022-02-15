@@ -56,6 +56,8 @@ class MultiArmedBandits(World):
         self.cost_dimension = kwargs.get("cost_dimension", 1)
         self.cost_function_class = kwargs.get("cost_function_class", GaussianFeedback)
         self.cost_arms = kwargs.get("cost_arms", self.n_arms)
+        self.change_reward_every = kwargs.get("change_reward_every", None)
+        self.change_cost_every = kwargs.get("change_cost_every", None)
         World.__init__(self, name=name, seed=seed)
 
         self.build(**kwargs)
@@ -73,6 +75,7 @@ class MultiArmedBandits(World):
         self.cost_reveal_function = kwargs.get("cost_reveal_function", lambda: 1)
         self._reset_reward_function()
         self._reset_cost_function()
+        self.t = 0
 
     def _reset_reward_function(self):
         self.reward_function = self.reward_function_class(
@@ -102,36 +105,73 @@ class MultiArmedBandits(World):
             name="cost_function",
         )
 
+    def _get_randomized_feedback_variables(self):
+        random_reward_means = np.random.uniform(
+            0, self.reward_scale, (self.n_arms, self.reward_dimension)
+        )
+        random_reward_stds = np.random.uniform(
+            0, self.reward_scale / self.n_arms, (self.n_arms, self.reward_dimension)
+        )
+        random_cost_means = np.random.uniform(
+            0, self.cost_scale, (self.cost_arms, self.cost_dimension)
+        )
+        random_cost_stds = np.random.uniform(
+            0,
+            self.cost_scale / self.cost_arms,
+            (self.cost_arms, self.cost_dimension),
+        )
+        return (
+            random_reward_means,
+            random_reward_stds,
+            random_cost_means,
+            random_cost_stds,
+        )
+
     def _assign_reward_cost_variables(self):
         def check_none_and_assign(a, b):
             return b if a is None else np.array(a)
 
+        (
+            random_reward_means,
+            random_reward_stds,
+            random_cost_means,
+            random_cost_stds,
+        ) = self._get_randomized_feedback_variables()
+
         self.reward_means = self.reward_base + check_none_and_assign(
             self.reward_means,
-            np.random.uniform(
-                0, self.reward_scale, (self.n_arms, self.reward_dimension)
-            ),
+            random_reward_means,
         )
         self.reward_stds = check_none_and_assign(
             self.reward_stds,
-            np.random.uniform(
-                0, self.reward_scale / self.n_arms, (self.n_arms, self.reward_dimension)
-            ),
+            random_reward_stds,
         )
         self.cost_means = self.reward_base + check_none_and_assign(
             self.cost_means,
-            np.random.uniform(
-                0, self.cost_scale, (self.cost_arms, self.cost_dimension)
-            ),
+            random_cost_means,
         )
         self.cost_stds = check_none_and_assign(
             self.cost_stds,
-            np.random.uniform(
-                0,
-                self.cost_scale / self.cost_arms,
-                (self.cost_arms, self.cost_dimension),
-            ),
+            random_cost_stds,
         )
+
+    def _reset_reward_during_learning(self):
+        (
+            self.reward_means,
+            self.reward_stds,
+            _,
+            _,
+        ) = self._get_randomized_feedback_variables()
+        self._reset_reward_function()
+
+    def _reset_cost_during_learning(self):
+        (
+            _,
+            _,
+            self.cost_means,
+            self.cost_stds,
+        ) = self._get_randomized_feedback_variables()
+        self._reset_cost_function()
 
     def _check_predefined_variables(self):
         (
@@ -175,6 +215,15 @@ class MultiArmedBandits(World):
         return metrics_dict
 
     def _update_metrics(self, metrics, feedbacks, agent):
+        self.t += 1
+        # TODO Add tests for change_x_every
+        if (
+            self.change_reward_every is not None
+            and self.t % self.change_reward_every == 0
+        ):
+            self._reset_reward_during_learning()
+        if self.change_cost_every is not None and self.t % self.change_cost_every == 0:
+            self._reset_cost_during_learning()
         metrics["reward"].append(
             metrics["reward"][-1]
             + np.mean([x for x in feedbacks["rewards"] if x is not None])
@@ -214,6 +263,7 @@ class BernoulliMultiArmedBandits(MultiArmedBandits):
             reward_function_class=reward_function_class,
             **kwargs,
         )
+        # TODO Add reward_scale check. can only be 1.
 
 
 class ContextualCombinatorialBandits(MultiArmedBandits):

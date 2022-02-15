@@ -27,11 +27,12 @@ def plot_results(metrics, condition):
         .groupby(["world", "agent"])
         .sem()
     )
+
     for m in metric_names:
         sns_plot = sns.relplot(
             data=metrics, x="time", y=m, hue="agent", col="world", kind="line", ci=68
         )
-        sns_plot.savefig("epidemic_" + str(condition) + "_" + m + "_test.png")
+        sns_plot.savefig("evoepidemic_" + str(condition) + "_" + m + "_test.png")
 
 
 def plot_pareto(metrics):
@@ -46,7 +47,7 @@ def plot_pareto(metrics):
         kind="line",
         ci=68,
     )
-    sns_plot.savefig("epidemic_pareto_test.png")
+    sns_plot.savefig("evoepidemic_pareto_test.png")
 
 
 def epidemic_setup(n_world_instances, n_agent_instances, w):
@@ -56,40 +57,40 @@ def epidemic_setup(n_world_instances, n_agent_instances, w):
     g.add_world_class(
         worlds.EpidemicControl_v1,
         action_dimension=2,
-        action_options=[10, 10],
-        context_dimension=20,
+        action_options=[3, 6],
+        context_dimension=18,
+        combinatorial_cost=True,
         reward_scale=1,
         name="Epidemic (constant context)",
     )
     g.add_world_class(
         worlds.EpidemicControl_v2,
         action_dimension=2,
-        action_options=[10, 10],
-        context_dimension=20,
+        action_options=[3, 6],
+        context_dimension=18,
+        combinatorial_cost=True,
         reward_scale=1,
+        change_every=10,
         name="Epidemic (context changes every 10 days)",
     )
     g.add_world_class(
         worlds.EpidemicControl_v2,
         action_dimension=2,
-        action_options=[10, 10],
-        context_dimension=20,
+        action_options=[3, 6],
+        context_dimension=18,
+        combinatorial_cost=True,
         change_every=1,
         name="Epidemic (context changes every 1 day)",
     )
     g.add_agent_class(
         agents.CCMABB,
-        agent_base=agents.UCB1,
+        agent_base=agents.GTS,
         obj_func=agents.utils.budget_obj_v2,
         obj_params={"w": w},
-        name="IndComb-UCB1",
-    )
-    g.add_agent_class(
-        agents.CCMABB,
-        agent_base=agents.TS,
-        obj_func=agents.utils.budget_obj_v2,
-        obj_params={"w": w},
-        name="IndComb-TS",
+        n_population=100,
+        mutation_times=10,
+        mutation_max_val=1,
+        name="IndComb-GTS",
     )
     g.add_agent_class(
         agents.CCTSB,
@@ -97,15 +98,7 @@ def epidemic_setup(n_world_instances, n_agent_instances, w):
         nabla=1,
         obj_func=agents.utils.budget_obj_v2,
         obj_params={"w": w},
-        name="CCTSB-0.1",
-    )
-    g.add_agent_class(
-        agents.CCTSB,
-        alpha=0.01,
-        nabla=1,
-        obj_func=agents.utils.budget_obj_v2,
-        obj_params={"w": w},
-        name="CCTSB-0.01",
+        name="CCTSB",
     )
     g.add_agent_class(agents.CombRandom, name="Random")
     g.add_agent_class(agents.CombRandomFixed, name="RandomFixed")
@@ -113,6 +106,8 @@ def epidemic_setup(n_world_instances, n_agent_instances, w):
 
 
 def epidemic_extreme(n_world_instances, n_agent_instances, T, condition, plot=True):
+    print("=======================================")
+    print("============= extreme ", condition, "===========")
     g = epidemic_setup(
         n_world_instances=n_world_instances,
         n_agent_instances=n_agent_instances,
@@ -128,16 +123,18 @@ def epidemic_extreme(n_world_instances, n_agent_instances, T, condition, plot=Tr
 
 
 def epidemic_pareto(n_world_instances, n_agent_instances, T, plot=True):
+    print("=======================================")
+    print("============= pareto ===========")
     g = epidemic_setup(
         n_world_instances=n_world_instances, n_agent_instances=n_agent_instances, w=0.5
     )
     g.set_params_sweep(w=[0, 0.25, 0.5, 0.75, 1])
     g.run_experiments(T=T, progress=True)
-    metrics = g.get_pareto_metrics()
-    metrics["budget"] = metrics["cost_"]
-    metrics["cases"] = np.exp(-metrics["reward_"] / metrics["reward_"].mean())
+    metrics_p = g.get_pareto_metrics()
+    metrics_p["budget"] = metrics_p["cost_"]
+    metrics_p["cases"] = np.exp(-metrics_p["reward_"] / metrics_p["reward_"].mean())
     if plot:
-        plot_pareto(metrics)
+        plot_pareto(metrics_p)
 
 
 def main():
