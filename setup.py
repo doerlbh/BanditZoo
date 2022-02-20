@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="banditzoo",
-    version="0.0.6",
+    version="0.0.7",
     author="Baihan Lin",
     author_email="doerlbh@gmail.com",
     description="Python library of bandits and RL agents in different real-world environments",
@@ -24,7 +24,7 @@ setuptools.setup(
     package_dir={"": "banditzoo"},
     packages=setuptools.find_packages(where="banditzoo"),
     python_requires=">=3.6",
-    install_requires=["numpy>=1.16.5", "pandas"],
+    install_requires=["numpy>=1.16.5", "pandas", "scipy"],
     test_suite="nose.collector",
     tests_require=["nose"],
     include_package_data=True,
