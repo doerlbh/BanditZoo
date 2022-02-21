@@ -51,7 +51,7 @@ def increment_std(x, mu_tm1, s_tm1, n):
     if n < 2:
         new_std = 0
     else:
-        new_std = np.sqrt(s_tm1 ** 2 * (n - 2) / (n - 1) + (x - mu_tm1) ** 2 / n)
+        new_std = np.sqrt(s_tm1**2 * (n - 2) / (n - 1) + (x - mu_tm1) ** 2 / n)
     return new_std
 
 

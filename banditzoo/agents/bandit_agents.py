@@ -606,7 +606,7 @@ class CTS(ContextualAgent):
         for i in range(self.n_arms):
             sample_theta[i] = np.random.multivariate_normal(
                 self.theta_i[i],
-                self.alpha ** 2 * np.linalg.pinv(self.B_i[i]),
+                self.alpha**2 * np.linalg.pinv(self.B_i[i]),
             )
         self.i_t = np.argmax((self.c_t.T @ np.array(sample_theta).T))
         return self.i_t
@@ -722,7 +722,7 @@ class CCTS(ContextualCombinatorialAgent):
             for i in range(len(sample_theta[k])):
                 sample_theta[k][i] = np.random.multivariate_normal(
                     self.theta_i_k[k][i],
-                    self.alpha ** 2 * np.linalg.pinv(self.B_i_k[k][i]),
+                    self.alpha**2 * np.linalg.pinv(self.B_i_k[k][i]),
                 )
 
             i_t[k] = np.argmax((self.c_t.T @ np.array(sample_theta[k]).T))

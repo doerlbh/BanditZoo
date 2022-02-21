@@ -176,10 +176,10 @@ class Game(object):
         for k in self.world_names:
             agg_metrics[k] = defaultdict(lambda: {})
             metrics_keys = list(self.world_pools[k][0].metrics[0].keys())
-            for i in range(self.n_world_instances):
-                for a in self.agent_names:
-                    agg_metrics[k][a] = defaultdict(lambda: [])
-                    agg_metrics[k][a]["name"] = a
+            for a in self.agent_names:
+                agg_metrics[k][a] = defaultdict(lambda: [])
+                agg_metrics[k][a]["name"] = a
+                for i in range(self.n_world_instances):
                     for mk in metrics_keys:
                         for m in world_agg_metrics[k][i][a][mk]:
                             agg_metrics[k][a][mk].append(m)
