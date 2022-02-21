@@ -68,7 +68,7 @@ class World(object):
         """Enter a pool of agents into the world.
 
         Args:
-            agents (list of banditzoo.agents objects): [a list of agent instances]
+            agents (array of banditzoo.agents objects): [a list of agent instances or indices]
         """
         for a in agents:
             self.add_agent(a)
@@ -83,11 +83,11 @@ class World(object):
         Returns:
             [list of banditzoo.agents objects]: [a list of agent instances or indices that matches the agent name].
         """
+        filtered = np.array([a.name == agent_name for a in self.agents])
         if get_index:
-            filtered = [a.name == agent_name for a in self.agents]
             return np.arange(len(self.agents))[filtered]
         else:
-            return [a for a in self.agents if a.name == agent_name]
+            return np.array(self.agents)[filtered]
 
     def filter_history(self, agent_name):
         return [self.history[a] for a in self.filter_agent(agent_name, get_index=True)]

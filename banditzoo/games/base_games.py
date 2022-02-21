@@ -115,12 +115,13 @@ class Game(object):
 
         agent_name = kwargs.get("name", agent_class(**kwargs).name)
         self.agent_names.append(agent_name)
-        agent_instances = []
-        for i in range(self.n_agent_instances):
-            agent_instances.append(agent_class(**kwargs, seed=i))
         for k in self.world_names:
             for i in range(self.n_world_instances):
+                agent_instances = [
+                    agent_class(**kwargs, seed=j) for j in range(self.n_agent_instances)
+                ]
                 self.agent_pools[k][i][agent_name] = agent_instances
+                self.world_pools[k][i].add_agent_pool(agent_instances)
                 self.history_pools[k][i][agent_name] = []
                 self.metrics_pools[k][i][agent_name] = []
         self.world_add_lock = True
@@ -204,7 +205,7 @@ class Game(object):
             progress (bool, optional): [whether to print progress]. Defaults to False.
         """
         for k in self.world_names:
-            for i, w in enumerate(self.world_pools[k]):
+            for i in range(self.n_world_instances):
                 if progress:
                     print("==============================================")
                     print(
@@ -215,13 +216,15 @@ class Game(object):
                         + "/"
                         + str(self.n_world_instances)
                     )
+                self.world_pools[k][i].run_experiments(T=T, progress=progress)
                 for a in self.agent_names:
-                    w.add_agent_pool(self.agent_pools[k][i][a])
-                w.run_experiments(T=T, progress=progress)
-                for a in self.agent_names:
-                    self.agent_pools[k][i][a] = w.filter_agent(a)
-                    self.history_pools[k][i][a] = w.filter_history(a)
-                    self.metrics_pools[k][i][a] = w.filter_metrics(a)
+                    self.agent_pools[k][i][a] = self.world_pools[k][i].filter_agent(a)
+                    self.history_pools[k][i][a] = self.world_pools[k][i].filter_history(
+                        a
+                    )
+                    self.metrics_pools[k][i][a] = self.world_pools[k][i].filter_metrics(
+                        a
+                    )
         self.agent_add_lock = True
         self.world_add_lock = True
 

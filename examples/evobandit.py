@@ -7,8 +7,7 @@ from banditzoo import worlds
 from banditzoo import games
 
 
-def plot_results(metrics, filename="evobandit"):
-    import seaborn as sns
+def plot_results(metrics, filename="evobandit", plot=True):
 
     metric_names = ["reward", "regret"]
     print("---- mean ----")
@@ -28,17 +27,28 @@ def plot_results(metrics, filename="evobandit"):
         .sem()
     )
 
-    for m in metric_names:
-        sns_plot = sns.relplot(
-            data=metrics, x="time", y=m, hue="agent", col="world", kind="line", ci=68
-        )
-        sns_plot.savefig(filename + "_" + m + "_test.png")
+    if plot:
+        import seaborn as sns
+
+        for m in metric_names:
+            sns_plot = sns.relplot(
+                data=metrics,
+                x="time",
+                y=m,
+                hue="agent",
+                col="world",
+                kind="line",
+                ci=68,
+            )
+            sns_plot.savefig(filename + "_" + m + "_test.png")
 
 
-def eval_ablation():
+def eval_ablation(T=100, n_world_instances=10, n_agent_instances=10, plot=True):
     print("==============================================")
     print("============ ablation ================")
-    g = games.Game(n_world_instances=10, n_agent_instances=10)
+    g = games.Game(
+        n_world_instances=n_world_instances, n_agent_instances=n_agent_instances
+    )
     g.add_world_class(worlds.BernoulliMultiArmedBandits, n_arms=5, name="MAB of 5 arms")
     g.add_world_class(
         worlds.BernoulliMultiArmedBandits, n_arms=10, name="MAB of 10 arms"
@@ -83,14 +93,16 @@ def eval_ablation():
     g.add_agent_class(agents.TS, name="TS")
     g.add_agent_class(agents.UCB1, name="UCB1")
     g.add_agent_class(agents.Random, name="Random")
-    g.run_experiments(T=100, progress=False)
-    plot_results(g.get_metrics(form="tabular"), "evobandit_ablation")
+    g.run_experiments(T=T, progress=False)
+    plot_results(g.get_metrics(form="tabular"), "evobandit_ablation", plot=plot)
 
 
-def eval_pop():
+def eval_pop(T=100, n_world_instances=10, n_agent_instances=10, plot=True):
     print("==============================================")
     print("============ pop ================")
-    g = games.Game(n_world_instances=5, n_agent_instances=10)
+    g = games.Game(
+        n_world_instances=n_world_instances, n_agent_instances=n_agent_instances
+    )
     g.add_world_class(worlds.BernoulliMultiArmedBandits, n_arms=5, name="MAB of 5 arms")
     g.add_world_class(
         worlds.BernoulliMultiArmedBandits, n_arms=10, name="MAB of 10 arms"
@@ -122,14 +134,16 @@ def eval_pop():
     g.add_agent_class(agents.TS, name="TS")
     g.add_agent_class(agents.UCB1, name="UCB1")
     g.add_agent_class(agents.Random, name="Random")
-    g.run_experiments(T=100, progress=False)
-    plot_results(g.get_metrics(form="tabular"), "evobandit_pop")
+    g.run_experiments(T=T, progress=False)
+    plot_results(g.get_metrics(form="tabular"), "evobandit_pop", plot=plot)
 
 
-def eval_mutation():
+def eval_mutation(T=100, n_world_instances=10, n_agent_instances=10, plot=True):
     print("==============================================")
     print("============ mutation ================")
-    g = games.Game(n_world_instances=10, n_agent_instances=10)
+    g = games.Game(
+        n_world_instances=n_world_instances, n_agent_instances=n_agent_instances
+    )
     g.add_world_class(worlds.BernoulliMultiArmedBandits, n_arms=5, name="MAB of 5 arms")
     g.add_world_class(
         worlds.BernoulliMultiArmedBandits, n_arms=10, name="MAB of 10 arms"
@@ -161,14 +175,16 @@ def eval_mutation():
     g.add_agent_class(agents.TS, name="TS")
     g.add_agent_class(agents.UCB1, name="UCB1")
     g.add_agent_class(agents.Random, name="Random")
-    g.run_experiments(T=100, progress=False)
-    plot_results(g.get_metrics(form="tabular"), "evobandit_mutation")
+    g.run_experiments(T=T, progress=False)
+    plot_results(g.get_metrics(form="tabular"), "evobandit_mutation", plot=plot)
 
 
-def eval_ns_ablation():
+def eval_ns_ablation(T=100, n_world_instances=10, n_agent_instances=10, plot=True):
     print("==============================================")
     print("============ ns ablation ================")
-    g = games.Game(n_world_instances=10, n_agent_instances=10)
+    g = games.Game(
+        n_world_instances=n_world_instances, n_agent_instances=n_agent_instances
+    )
     g.add_world_class(
         worlds.BernoulliMultiArmedBandits,
         change_reward_every=10,
@@ -224,14 +240,16 @@ def eval_ns_ablation():
     g.add_agent_class(agents.TS, name="TS")
     g.add_agent_class(agents.UCB1, name="UCB1")
     g.add_agent_class(agents.Random, name="Random")
-    g.run_experiments(T=100, progress=False)
-    plot_results(g.get_metrics(form="tabular"), "evobandit_ns_ablation")
+    g.run_experiments(T=T, progress=False)
+    plot_results(g.get_metrics(form="tabular"), "evobandit_ns_ablation", plot=plot)
 
 
-def eval_ns_pop():
+def eval_ns_pop(T=100, n_world_instances=10, n_agent_instances=10, plot=True):
     print("==============================================")
     print("============ ns pop ================")
-    g = games.Game(n_world_instances=5, n_agent_instances=10)
+    g = games.Game(
+        n_world_instances=n_world_instances, n_agent_instances=n_agent_instances
+    )
     g.add_world_class(
         worlds.BernoulliMultiArmedBandits,
         change_reward_every=10,
@@ -274,14 +292,16 @@ def eval_ns_pop():
     g.add_agent_class(agents.TS, name="TS")
     g.add_agent_class(agents.UCB1, name="UCB1")
     g.add_agent_class(agents.Random, name="Random")
-    g.run_experiments(T=100, progress=False)
-    plot_results(g.get_metrics(form="tabular"), "evobandit_ns_pop")
+    g.run_experiments(T=T, progress=False)
+    plot_results(g.get_metrics(form="tabular"), "evobandit_ns_pop", plot=plot)
 
 
-def eval_ns_mutation():
+def eval_ns_mutation(T=100, n_world_instances=10, n_agent_instances=10, plot=True):
     print("==============================================")
     print("============ ns mutation ================")
-    g = games.Game(n_world_instances=10, n_agent_instances=10)
+    g = games.Game(
+        n_world_instances=n_world_instances, n_agent_instances=n_agent_instances
+    )
     g.add_world_class(
         worlds.BernoulliMultiArmedBandits,
         change_reward_every=10,
@@ -324,31 +344,26 @@ def eval_ns_mutation():
     g.add_agent_class(agents.TS, name="TS")
     g.add_agent_class(agents.UCB1, name="UCB1")
     g.add_agent_class(agents.Random, name="Random")
-    g.run_experiments(T=100, progress=False)
-    plot_results(g.get_metrics(form="tabular"), "evobandit_ns_mutation")
+    g.run_experiments(T=T, progress=False)
+    plot_results(g.get_metrics(form="tabular"), "evobandit_ns_mutation", plot=plot)
 
 
 def main():
-    eval_ns_ablation()
-    eval_ablation()
-    eval_ns_pop()
-    eval_pop()
-    eval_ns_mutation()
-    eval_mutation()
+    eval_ns_ablation(T=100, n_world_instances=10, n_agent_instances=10)
+    eval_ablation(T=100, n_world_instances=10, n_agent_instances=10)
+    eval_ns_pop(T=100, n_world_instances=10, n_agent_instances=10)
+    eval_pop(T=100, n_world_instances=10, n_agent_instances=10)
+    eval_ns_mutation(T=100, n_world_instances=10, n_agent_instances=10)
+    eval_mutation(T=100, n_world_instances=10, n_agent_instances=10)
 
 
 def test():
-    g = games.Game(n_world_instances=2, n_agent_instances=2)
-    g.add_world_class(
-        worlds.BernoulliMultiArmedBandits, change_reward_every=2, n_arms=5, name="MAB5"
-    )
-    g.add_agent_class(agents.EGreedy, epsilon=0.05, name="Epsilon Greedy")
-    g.add_agent_class(agents.GTS, name="GTS")
-    g.add_agent_class(agents.TS, name="TS")
-    g.add_agent_class(agents.UCB1, name="UCB1")
-    g.add_agent_class(agents.Random, name="Random")
-    g.run_experiments(T=2, progress=False)
-    metrics = g.get_metrics(form="tabular")
+    eval_ns_ablation(T=2, n_world_instances=2, n_agent_instances=1, plot=False)
+    eval_ablation(T=2, n_world_instances=2, n_agent_instances=1, plot=False)
+    eval_ns_pop(T=2, n_world_instances=2, n_agent_instances=1, plot=False)
+    eval_pop(T=2, n_world_instances=2, n_agent_instances=1, plot=False)
+    eval_ns_mutation(T=2, n_world_instances=2, n_agent_instances=1, plot=False)
+    eval_mutation(T=2, n_world_instances=2, n_agent_instances=1, plot=False)
 
 
 if __name__ == "__main__":

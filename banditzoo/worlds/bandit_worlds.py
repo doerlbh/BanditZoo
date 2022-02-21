@@ -216,7 +216,6 @@ class MultiArmedBandits(World):
 
     def _update_metrics(self, metrics, feedbacks, agent):
         self.t += 1
-        # TODO Add tests for change_x_every
         if (
             self.change_reward_every is not None
             and self.t % self.change_reward_every == 0
@@ -263,7 +262,6 @@ class BernoulliMultiArmedBandits(MultiArmedBandits):
             reward_function_class=reward_function_class,
             **kwargs,
         )
-        # TODO Add reward_scale check. can only be 1.
 
 
 class ContextualCombinatorialBandits(MultiArmedBandits):

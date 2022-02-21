@@ -116,6 +116,12 @@ class TestContextualCombinatorialAgents(TestCase):
 
 
 class TestUtils(TestCase):
+    def test_increment_std_works(self):
+        x, mu_tm1, s_tm1, n = 10, 5, 5, 3
+        new_std = agents.utils.increment_std(x, mu_tm1, s_tm1, n)
+        expected_r = np.sqrt(s_tm1**2 * (n - 2) / (n - 1) + (x - mu_tm1) ** 2 / n)
+        self.assertEqual(expected_r, expected_r)
+
     def test_the_default_obj_works(self):
         rewards = {"rewards": [1], "costs": [2]}
         obj_params = {}
@@ -123,12 +129,22 @@ class TestUtils(TestCase):
         expected_r = 1.5
         self.assertEqual(expected_r, expected_r)
 
-    def test_the_default_obj_works(self):
+    def test_the_default_obj_v1_works(self):
         rewards = {"rewards": [1], "costs": [2]}
         w = 0.5
         obj_params = {"w": w}
         r = agents.utils.budget_obj_v1(rewards, obj_params)
         expected_r = w * np.mean(rewards["rewards"]) + (1 - w) / np.mean(
+            rewards["costs"]
+        )
+        self.assertEqual(expected_r, expected_r)
+
+    def test_the_default_obj_v2_works(self):
+        rewards = {"rewards": [1], "costs": [2]}
+        w = 0.5
+        obj_params = {"w": w}
+        r = agents.utils.budget_obj_v2(rewards, obj_params)
+        expected_r = w * np.mean(rewards["rewards"]) - (1 - w) * np.mean(
             rewards["costs"]
         )
         self.assertEqual(expected_r, expected_r)

@@ -7,8 +7,7 @@ from banditzoo import worlds
 from banditzoo import games
 
 
-def plot_results(metrics, condition):
-    import seaborn as sns
+def plot_results(metrics, condition, plot=True):
 
     metric_names = ["reward", "cost", "budget", "cases"]
     print("---- mean ----")
@@ -28,11 +27,20 @@ def plot_results(metrics, condition):
         .sem()
     )
 
-    for m in metric_names:
-        sns_plot = sns.relplot(
-            data=metrics, x="time", y=m, hue="agent", col="world", kind="line", ci=68
-        )
-        sns_plot.savefig("evoepidemic_" + str(condition) + "_" + m + "_test.png")
+    if plot:
+        import seaborn as sns
+
+        for m in metric_names:
+            sns_plot = sns.relplot(
+                data=metrics,
+                x="time",
+                y=m,
+                hue="agent",
+                col="world",
+                kind="line",
+                ci=68,
+            )
+            sns_plot.savefig("evoepidemic_" + str(condition) + "_" + m + "_test.png")
 
 
 def plot_pareto(metrics):
@@ -114,12 +122,11 @@ def epidemic_extreme(n_world_instances, n_agent_instances, T, condition, plot=Tr
         w=condition,
     )
     g.set_params_sweep(w=[condition])
-    g.run_experiments(T=T, progress=True)
+    g.run_experiments(T=T, progress=False)
     metrics = g.get_pareto_metrics()
     metrics["budget"] = metrics["cost_"]
     metrics["cases"] = np.exp(-metrics["reward_"] / metrics["reward_"].mean())
-    if plot:
-        plot_results(metrics, condition)
+    plot_results(metrics, condition, plot=plot)
 
 
 def epidemic_pareto(n_world_instances, n_agent_instances, T, plot=True):
@@ -129,7 +136,7 @@ def epidemic_pareto(n_world_instances, n_agent_instances, T, plot=True):
         n_world_instances=n_world_instances, n_agent_instances=n_agent_instances, w=0.5
     )
     g.set_params_sweep(w=[0, 0.25, 0.5, 0.75, 1])
-    g.run_experiments(T=T, progress=True)
+    g.run_experiments(T=T, progress=False)
     metrics_p = g.get_pareto_metrics()
     metrics_p["budget"] = metrics_p["cost_"]
     metrics_p["cases"] = np.exp(-metrics_p["reward_"] / metrics_p["reward_"].mean())
@@ -138,9 +145,9 @@ def epidemic_pareto(n_world_instances, n_agent_instances, T, plot=True):
 
 
 def main():
-    epidemic_extreme(n_world_instances=50, n_agent_instances=1, T=100, condition=1)
-    epidemic_extreme(n_world_instances=50, n_agent_instances=1, T=100, condition=0)
-    epidemic_pareto(n_world_instances=50, n_agent_instances=1, T=100)
+    epidemic_extreme(n_world_instances=20, n_agent_instances=5, T=100, condition=1)
+    epidemic_extreme(n_world_instances=20, n_agent_instances=5, T=100, condition=0)
+    epidemic_pareto(n_world_instances=20, n_agent_instances=5, T=100)
 
 
 def test():
@@ -150,7 +157,7 @@ def test():
     epidemic_extreme(
         n_world_instances=2, n_agent_instances=2, T=2, condition=0, plot=False
     )
-    epidemic_pareto(n_world_instances=1, n_agent_instances=2, T=2, plot=False)
+    epidemic_pareto(n_world_instances=2, n_agent_instances=1, T=2, plot=False)
 
 
 if __name__ == "__main__":

@@ -49,7 +49,35 @@ class TestBanditWorlds(TestCase):
         self,
     ):
         world = self.world
-        w = world(n_arms=5, reward_dimension=3, reward_scale=2, reward_base=3)
+        w = world(n_arms=5, reward_dimension=3, reward_scale=1, reward_base=3)
+        a = agents.Random()
+        w.add_agent(a)
+
+    def test_the_world_can_change_reward_every_n_rounds(
+        self,
+    ):
+        world = self.world
+        w = world(
+            n_arms=5,
+            change_reward_every=5,
+            reward_dimension=3,
+            reward_scale=1,
+            reward_base=3,
+        )
+        a = agents.Random()
+        w.add_agent(a)
+
+    def test_the_world_can_change_cost_every_n_rounds(
+        self,
+    ):
+        world = self.world
+        w = world(
+            n_arms=5,
+            change_cost_every=5,
+            reward_dimension=3,
+            reward_scale=1,
+            reward_base=3,
+        )
         a = agents.Random()
         w.add_agent(a)
 
@@ -216,6 +244,22 @@ class TestMultiArmedBanditWorlds(TestCase):
 
 @parameterized_class(
     [
+        {"world": worlds.BernoulliMultiArmedBandits},
+    ]
+)
+class TestBernoulliMultiArmedBanditWorlds(TestCase):
+    def test_the_world_throws_error_if_reward_scale_is_not_1(self):
+        world = self.world
+        with self.assertRaises(Exception) as context:
+            w = world(n_arms=3, reward_scale=2)
+        self.assertTrue(
+            "The reward_scale in Bernoulli bandits can only be 1, now 2"
+            in str(context.exception)
+        )
+
+
+@parameterized_class(
+    [
         {"world": worlds.EpidemicControl_v1},
         {"world": worlds.EpidemicControl_v2},
     ]
@@ -256,3 +300,9 @@ class TestCombinatorialWorlds(TestCase):
         w.add_agent(a1)
         w.add_agent(a2)
         w.run_experiments(T=10)
+
+
+class TestUtils(TestCase):
+    def test_print_progress_works(self):
+        t, T, bar_length = 2, 10, 10
+        worlds.utils.print_progress(t, T, bar_length)

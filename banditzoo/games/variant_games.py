@@ -99,13 +99,16 @@ class MultiObjectiveGame(Game):
         for k in self.world_names:
             for i in range(self.n_world_instances):
                 for a_name in self.agent_names:
-                    for a in self.agent_pools[k][i][a_name]:
+                    for j in range(self.n_agent_instances):
                         for params_name, params_val in kwargs.items():
                             if (
-                                hasattr(a, "obj_params")
-                                and params_name in a.obj_params.keys()
+                                hasattr(self.agent_pools[k][i][a_name][j], "obj_params")
+                                and params_name
+                                in self.agent_pools[k][i][a_name][j].obj_params.keys()
                             ):
-                                a.obj_params[params_name] = params_val
+                                self.agent_pools[k][i][a_name][j].obj_params[
+                                    params_name
+                                ] = params_val
 
     def get_tabular_metrics(self):
         """Extract the metrics in a tabular format in a pandas dataframe."""

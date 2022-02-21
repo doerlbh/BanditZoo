@@ -46,7 +46,7 @@ class TestGames(TestCase):
         g = game(n_agent_instances=3, n_world_instances=4)
         g.add_world_class(worlds.BernoulliMultiArmedBandits, n_arms=5, name="MAB5A")
         g.add_world_class(
-            worlds.BernoulliMultiArmedBandits, n_arms=5, reward_scale=2, name="MAB5B"
+            worlds.BernoulliMultiArmedBandits, n_arms=5, reward_scale=1, name="MAB5B"
         )
         g.add_agent_class(agents.TS)
 

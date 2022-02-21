@@ -198,6 +198,11 @@ class BernoulliFeedback(Feedback):
         self.scale = scale
         self.min = min
         self.max = max
+        if self.scale != 1:
+            raise ValueError(
+                "The reward_scale in Bernoulli bandits can only be 1, now "
+                + str(self.scale)
+            )
         Feedback.__init__(
             self,
             dimension=dimension,
